@@ -29,6 +29,8 @@ from agentbox.api.routers import (
     webhooks,
 )
 from agentbox.config import get_settings
+from agentbox.connectors.dashboard import router as connectors_dashboard_router
+from agentbox.connectors.router import router as connections_router
 from agentbox.dashboard.router import register_dashboard_handlers
 from agentbox.dashboard.router import router as dashboard_router
 from agentbox.db.seed import ensure_seed_data
@@ -88,7 +90,9 @@ def create_app(runtime: Runtime | None = None) -> FastAPI:
     for r in (policies, suppressions, approvals, providers, provider_events, analytics, usage, api_keys):
         app.include_router(r.router)
 
+    app.include_router(connections_router)
     app.include_router(dashboard_router)
+    app.include_router(connectors_dashboard_router)
     settings = runtime.settings if runtime is not None else get_settings()
     for ext_router in registry().routers(settings):
         app.include_router(ext_router)

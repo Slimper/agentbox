@@ -50,6 +50,7 @@ export class AgentBox {
   private readonly maxRetries: number;
 
   readonly inboxes = new Inboxes(this);
+  readonly connections = new Connections(this);
   readonly messages = new Messages(this);
   readonly threads = new Threads(this);
   readonly attachments = new Attachments(this);
@@ -142,6 +143,22 @@ export class Inboxes extends Resource {
 export interface SendOptions {
   to: Address | Address[]; cc?: Address | Address[]; bcc?: Address | Address[]; reply_to?: Address | Address[];
   subject?: string; text?: string; html?: string; attachment_ids?: string[]; headers?: Record<string, string>; metadata?: Json;
+}
+
+/** Existing mailboxes (Gmail, Yandex 360, Microsoft 365, any IMAP) exposed as inboxes. */
+export class Connections extends Resource {
+  async presets(): Promise<Json[]> { return (await this.c.request("GET", "/v1/connections/presets") as any).data; }
+  create(body: { provider: string; address: string; password: string; username?: string; imap_host?: string; imap_port?: number;
+                 smtp_host?: string; smtp_port?: number; smtp_ssl?: boolean; display_name?: string; metadata?: Json },
+         idempotencyKey?: string): Promise<Json> {
+    return this.c.request("POST", "/v1/connections", { json: clean(body), idempotencyKey });
+  }
+  async list(): Promise<Json[]> { return (await this.c.request("GET", "/v1/connections") as any).data; }
+  get(id: string): Promise<Json> { return this.c.request("GET", `/v1/connections/${id}`); }
+  sync(id: string): Promise<Json> { return this.c.request("POST", `/v1/connections/${id}/sync`); }
+  pause(id: string): Promise<Json> { return this.c.request("POST", `/v1/connections/${id}/pause`); }
+  resume(id: string): Promise<Json> { return this.c.request("POST", `/v1/connections/${id}/resume`); }
+  delete(id: string): Promise<null> { return this.c.request("DELETE", `/v1/connections/${id}`); }
 }
 
 export class Messages extends Resource {

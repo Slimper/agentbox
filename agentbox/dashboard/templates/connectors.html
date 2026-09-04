@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block title %}Connectors{% endblock %}
+{% block content %}
+{% call m.page_head('Mailbox connectors', 'Expose an existing Yandex 360, VK WorkSpace, Microsoft 365, Gmail or IMAP mailbox as an AgentBox inbox') %}<a class="ds-button ds-button--primary ds-button--s" href="/dashboard/connectors?connect=1">{{ m.icon('plus', 16) }}Connect mailbox</a>{% endcall %}
+{% if error %}<div style="padding:10px 12px;border-radius:6px;background:var(--color-status-error-bg);color:var(--color-status-error)">{{ error }}</div>{% endif %}
+<div class="ds-card ds-card--none abx-list">
+  <div class="abx-grid-head" style="grid-template-columns:1.4fr 120px 1fr 120px 160px 200px"><span>Mailbox</span><span>Provider</span><span>IMAP / SMTP</span><span>Status</span><span>Last sync</span><span></span></div>
+  {% for c in connections %}
+  <div class="abx-grid-row" style="grid-template-columns:1.4fr 120px 1fr 120px 160px 200px">
+    <span><a class="mono" href="/dashboard/inboxes/{{ c.inbox_id }}" style="color:inherit;font-size:12px">{{ c.address }}</a>{% if c.last_error %}<div style="font-size:11px;color:var(--color-status-error)">{{ c.last_error }}</div>{% endif %}</span>
+    <span>{{ presets[c.provider].label if c.provider in presets else c.provider }}</span>
+    <span class="mono muted" style="font-size:11px">{{ c.imap_host }} / {{ c.smtp_host }}{% if c.auth == 'oauth' %} · OAuth{% endif %}</span>
+    <span class="{{ badge(c.status, 'xs') }}" style="justify-self:start">{{ c.status }}</span>
+    <span class="muted">{{ c.last_sync_at[:16].replace('T', ' ') if c.last_sync_at else '—' }} · uid {{ c.last_uid }}</span>
+    <form method="post" action="/dashboard/connectors/{{ c.id }}/action" style="display:flex;gap:6px"><button class="ds-button ds-button--secondary ds-button--xs" name="action" value="sync">Sync now</button><button class="ds-button ds-button--ghost ds-button--xs" name="action" value="toggle">{{ 'Pause' if c.status == 'active' else 'Resume' }}</button><button class="ds-button ds-button--ghost ds-button--xs" name="action" value="disconnect" style="color:var(--color-status-error)" onclick="return confirm('Disconnect mailbox?')">Disconnect</button></form>
+  </div>
+  {% else %}<div class="faint" style="padding:24px 16px;font-size:13px">No connected mailboxes. Managed inboxes on your own domain stay the recommended path; connectors are for existing corporate addresses.</div>{% endfor %}
+</div>
+{% if connect %}
+{% call m.modal('Connect an existing mailbox', '/dashboard/connectors') %}
+  {% include "ee/connector_oauth.html" ignore missing %}
+  <form method="post" action="/dashboard/connectors" style="display:flex;flex-direction:column;gap:12px">
+    <label class="abx-field"><span>Provider</span><select class="abx-select" name="provider">{% for key, p in presets.items() %}<option value="{{ key }}">{{ p.label }}</option>{% endfor %}</select></label>
+    <label class="abx-field"><span>Mailbox address</span><input class="abx-input mono" type="email" name="address" placeholder="robot@company.ru" required></label>
+    <div class="row"><label class="abx-field"><span>Login (if different)</span><input class="abx-input mono" name="username"></label><label class="abx-field"><span>App password</span><input class="abx-input mono" type="password" name="password" required></label></div>
+    <details><summary class="muted" style="cursor:pointer;font-size:12px">Custom IMAP / SMTP hosts (generic IMAP)</summary><div class="row" style="margin-top:8px"><input class="abx-input mono" name="imap_host" placeholder="imap.example.com"><input class="abx-input mono" name="imap_port" placeholder="993"><input class="abx-input mono" name="smtp_host" placeholder="smtp.example.com"><input class="abx-input mono" name="smtp_port" placeholder="587"></div></details>
+    <label class="abx-field"><span>Display name</span><input class="abx-input" name="display_name" placeholder="Robot"></label>
+    <div class="muted" style="font-size:12px">New mail is pulled over IMAP every 2 minutes and appears as inbound messages with webhooks; replies are sent through the mailbox's own SMTP from its own address. Same thing via API: <span class="mono">POST /v1/connections</span>.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><a class="ds-button ds-button--ghost ds-button--s" href="/dashboard/connectors">Cancel</a><button class="ds-button ds-button--primary ds-button--s">Connect</button></div>
+  </form>
+{% endcall %}
+{% endif %}
+{% endblock %}

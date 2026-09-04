@@ -84,7 +84,7 @@ COOKIE = "ab_dash"
 THEME_COOKIE = "ab_theme"
 
 NAV = [("overview", "Overview", "dashboard", "/dashboard"), ("inboxes", "Inboxes", "inbox", "/dashboard/inboxes"),
-       ("domains", "Domains", "globe", "/dashboard/domains"), ("webhooks", "Webhooks", "webhook", "/dashboard/webhooks"),
+       ("connectors", "Connectors", "mail", "/dashboard/connectors"), ("domains", "Domains", "globe", "/dashboard/domains"), ("webhooks", "Webhooks", "webhook", "/dashboard/webhooks"),
        ("keys", "API Keys", "key", "/dashboard/api-keys"), ("usage", "Usage & Billing", "chart", "/dashboard/usage"),
        ("policies", "Policies", "shield", "/dashboard/policies"), ("audit", "Audit Log", "scroll", "/dashboard/audit")]
 NAV2 = [("quickstart", "Quickstart", "zap", "/dashboard/quickstart"), ("console", "API Console", "terminal", "/dashboard/console")]

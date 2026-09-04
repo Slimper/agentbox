@@ -53,6 +53,7 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8000"
     support_email: str = "sales@agentbox.ru"
     github_url: str = "https://github.com/Slimper/agentbox"
+    connector_sync_interval_seconds: int = 120
     app_secret_key: str = "CHANGE-ME-generate-with-agentbox-keygen"
     idempotency_ttl_seconds: int = 86400
     worker_concurrency: int = 4

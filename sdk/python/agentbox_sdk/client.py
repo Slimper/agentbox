@@ -39,6 +39,7 @@ class AgentBox:
         headers = {"Authorization": f"Bearer {api_key}", "User-Agent": "agentbox-sdk-python/0.1"}
         self._http = httpx.Client(base_url=self.base_url, timeout=timeout, transport=transport, headers=headers)
         self.inboxes = Inboxes(self)
+        self.connections = Connections(self)
         self.messages = Messages(self)
         self.threads = Threads(self)
         self.attachments = Attachments(self)
@@ -137,6 +138,40 @@ class Inboxes(_Resource):
 
     def delete_policy(self, inbox_id: str) -> None:
         self._c.request("DELETE", f"/v1/inboxes/{inbox_id}/policy")
+
+
+class Connections(_Resource):
+    """Existing mailboxes (Gmail, Yandex 360, Microsoft 365, any IMAP) exposed as inboxes."""
+
+    def presets(self) -> list[dict]:
+        return self._c.request("GET", "/v1/connections/presets")["data"]
+
+    def create(self, provider: str, address: str, password: str, *, username: str | None = None,
+               imap_host: str | None = None, imap_port: int | None = None, smtp_host: str | None = None,
+               smtp_port: int | None = None, smtp_ssl: bool | None = None, display_name: str | None = None,
+               metadata: dict | None = None, idempotency_key: str | None = None) -> dict:
+        body = _clean({"provider": provider, "address": address, "password": password, "username": username,
+                       "imap_host": imap_host, "imap_port": imap_port, "smtp_host": smtp_host, "smtp_port": smtp_port,
+                       "smtp_ssl": smtp_ssl, "display_name": display_name, "metadata": metadata or {}})
+        return self._c.request("POST", "/v1/connections", json=body, idempotency_key=idempotency_key)
+
+    def list(self) -> list[dict]:
+        return self._c.request("GET", "/v1/connections")["data"]
+
+    def get(self, connection_id: str) -> dict:
+        return self._c.request("GET", f"/v1/connections/{connection_id}")
+
+    def sync(self, connection_id: str) -> dict:
+        return self._c.request("POST", f"/v1/connections/{connection_id}/sync")
+
+    def pause(self, connection_id: str) -> dict:
+        return self._c.request("POST", f"/v1/connections/{connection_id}/pause")
+
+    def resume(self, connection_id: str) -> dict:
+        return self._c.request("POST", f"/v1/connections/{connection_id}/resume")
+
+    def delete(self, connection_id: str) -> None:
+        self._c.request("DELETE", f"/v1/connections/{connection_id}")
 
 
 class Messages(_Resource):

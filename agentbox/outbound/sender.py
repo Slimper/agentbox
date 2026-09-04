@@ -70,6 +70,17 @@ async def send_outbound(ctx: JobContext, session: AsyncSession) -> None:
         if found:
             provider, mail_from = found
             break
+    if provider is None and inbox.provider_mode == "connected":
+        from agentbox.connectors.service import smtp_config_for_inbox
+        from agentbox.providers.smtp_relay import SMTPRelayProvider
+
+        cfg = await smtp_config_for_inbox(session, ctx.runtime.settings, inbox.id, http=ctx.runtime.http)
+        if cfg is None:
+            raise PermanentError("mailbox connection is missing or disconnected")
+        provider = SMTPRelayProvider(host=cfg["host"], port=cfg["port"], username=cfg["username"],
+                                     password=cfg["password"], starttls=cfg["starttls"], use_tls=cfg["use_tls"],
+                                     oauth_token=cfg.get("oauth_token"))
+        mail_from = cfg["mail_from"]
     if provider is None:
         account = await select_provider_account(session, message.organization_id, inbox_id=inbox.id,
                                                 recipient_domain=message.to_addresses[0]["email"].split("@")[-1])

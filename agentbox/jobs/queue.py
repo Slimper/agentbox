@@ -12,6 +12,7 @@ BACKOFF: dict[str, list[int]] = {
     "inbox_expire": [60, 600],
     "domain_verify": [60, 300, 900],
     "usage_rollup": [300, 1800],
+    "connector_sync": [60, 300],
 }
 
 
@@ -99,7 +100,7 @@ async def mark_done(session: AsyncSession, job_id: int) -> None:
     )
 
 
-PERIODIC: dict[str, timedelta] = {"usage_rollup": timedelta(hours=1)}
+PERIODIC: dict[str, timedelta] = {"usage_rollup": timedelta(hours=1), "connector_sync": timedelta(minutes=2)}
 
 
 def periodic_jobs(settings=None) -> dict[str, timedelta]:

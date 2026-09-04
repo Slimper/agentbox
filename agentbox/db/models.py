@@ -351,3 +351,20 @@ class UsageDaily(Base):
     webhook_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     custom_domains: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     computed_at: Mapped[datetime] = _ts(default=utcnow, onupdate=utcnow, nullable=False)
+
+
+class MailboxConnection(Timestamped, Base):
+    """An existing IMAP/SMTP mailbox exposed as an inbox (provider_mode=connected)."""
+
+    __tablename__ = "mailbox_connections"
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), nullable=False, index=True)
+    inbox_id: Mapped[str] = mapped_column(ForeignKey("inboxes.id"), nullable=False, unique=True)
+    provider: Mapped[str] = mapped_column(String(30), nullable=False)
+    address: Mapped[str] = mapped_column(String(320), nullable=False)
+    config_encrypted: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="active", nullable=False)
+    last_uid: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_sync_at: Mapped[datetime | None] = _ts()
+    last_error: Mapped[str | None] = mapped_column(Text)
+    sync_interval_seconds: Mapped[int] = mapped_column(Integer, default=120, nullable=False)

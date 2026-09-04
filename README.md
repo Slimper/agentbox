@@ -6,7 +6,7 @@ providers; operated from a console; driven from Python, TypeScript or MCP. Apach
 
 | Area | Highlights |
 |---|---|
-| Core | inboxes (incl. ephemeral `ttl`), send / receive / reply / forward, thread resolution, attachments, signed webhooks with retries, idempotency, long-poll `wait=`, Postgres-backed job queue, own SMTP edge, VERP bounce handling |
+| Core | inboxes (incl. ephemeral `ttl`) or connected existing mailboxes (Gmail, Yandex 360, M365, any IMAP), send / receive / reply / forward, thread resolution, attachments, signed webhooks with retries, idempotency, long-poll `wait=`, Postgres-backed job queue, own SMTP edge, VERP bounce handling |
 | Domains | custom domain onboarding, DNS records to publish, background verification (ownership, MX, SPF, DKIM, DMARC) |
 | Governance | org + inbox policies (allow/block lists, rate limits, loop protection, attachment rules), approval gates, suppressions, per-key API rate limit, audit events with NDJSON export |
 | Delivery | provider accounts (SMTP relay, SendGrid, Unisender Go), routing rules, provider event webhooks, delivery analytics |
@@ -15,6 +15,19 @@ providers; operated from a console; driven from Python, TypeScript or MCP. Apach
 
 A hosted edition with sign-up, teams, billing, SSO/SCIM and mailbox connectors is built on top of this core through
 `agentbox/extensions.py`; the core never depends on it.
+
+## Give your agent a mailbox in two minutes
+
+Any MCP-capable agent (OpenClaw, Hermes Agent, Claude Desktop, Cursor, Codex) gets email tools with one config entry,
+no install step:
+
+    "agentbox": { "command": "uvx",
+                  "args": ["--from", "agentbox-sdk[mcp] @ git+https://github.com/Slimper/agentbox#subdirectory=sdk/python", "agentbox-mcp"],
+                  "env": { "AGENTBOX_API_URL": "http://localhost:8000", "AGENTBOX_API_KEY": "ab_live_..." } }
+
+Then either create a managed address or connect the user's own Gmail / Yandex / Microsoft 365 / IMAP mailbox with an
+app password (`connect_mailbox`, or `POST /v1/connections`): no domain, DNS or port 25 needed. `docs/agents.md` has
+the details and `skills/agentbox/SKILL.md` is a drop-in skill for OpenClaw and Hermes.
 
 ## Run locally
 
@@ -63,6 +76,7 @@ MCP: `pip install './sdk/python[mcp]'` and run `agentbox-mcp` with `AGENTBOX_API
 | Area | Endpoints |
 |---|---|
 | Inboxes | `POST/GET /v1/inboxes`, `GET /v1/inboxes/{id}`, `POST .../disable`, `POST .../enable`, `DELETE`, `GET/PUT/DELETE .../policy` |
+| Connections | `GET /v1/connections/presets`, `POST/GET /v1/connections`, `GET /v1/connections/{id}`, `POST .../sync`, `POST .../pause`, `POST .../resume`, `DELETE` (existing IMAP/SMTP mailbox as an inbox) |
 | Messages | `POST /v1/inboxes/{id}/messages`, `GET /v1/inboxes/{id}/messages` (filters + `wait=`), `GET /v1/messages/{id}`, `POST .../reply`, `POST .../forward`, `POST .../approve`, `POST .../reject`, `GET /v1/approvals` |
 | Threads | `GET /v1/inboxes/{id}/threads`, `GET /v1/threads/{id}` |
 | Attachments | `POST /v1/attachments/uploads`, `GET /v1/attachments/{id}`, `GET .../download`, `GET /v1/messages/{id}/attachments` |

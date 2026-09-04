@@ -1,8 +1,8 @@
-import base64
 import re
 
 import aiosmtplib
 
+from agentbox.connectors.xoauth2 import xoauth2_b64
 from agentbox.mime.build import OutboundMessage
 from agentbox.providers.base import Envelope, PermanentError, SendResult, TemporaryError
 
@@ -27,8 +27,8 @@ class SMTPRelayProvider:
         try:
             if client.is_ehlo_or_helo_needed:
                 await client.ehlo()
-            auth = base64.b64encode(f"user={self.username}\x01auth=Bearer {self.oauth_token}\x01\x01".encode()).decode()
-            resp = await client.execute_command(b"AUTH", b"XOAUTH2", auth.encode())
+            blob = xoauth2_b64(self.username, self.oauth_token).encode()
+            resp = await client.execute_command(b"AUTH", b"XOAUTH2", blob)
             if resp.code == 334:  # server sent an error challenge; acknowledge to get the final status
                 resp = await client.execute_command(b"")
             if resp.code != 235:

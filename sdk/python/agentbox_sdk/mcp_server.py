@@ -76,6 +76,28 @@ def build_server(client: AgentBox | None = None) -> FastMCP:
 
     @mcp.tool()
     @guarded
+    def connect_mailbox(provider: str, address: str, password: str, username: str | None = None,
+                        imap_host: str | None = None, smtp_host: str | None = None, display_name: str | None = None) -> dict:
+        """Use an existing mailbox as an inbox: provider is gmail | yandex360 | vkworkspace | m365 | imap, password is an
+        app password. New mail is pulled every 2 minutes; replies go out through the mailbox's own SMTP. Returns the
+        connection with its inbox (use inbox["id"] with the other tools)."""
+        return c().connections.create(provider, address, password, username=username, imap_host=imap_host,
+                                      smtp_host=smtp_host, display_name=display_name)
+
+    @mcp.tool()
+    @guarded
+    def list_connections() -> list[dict]:
+        """List connected mailboxes (status, last sync, last error)."""
+        return c().connections.list()
+
+    @mcp.tool()
+    @guarded
+    def sync_mailbox(connection_id: str) -> dict:
+        """Pull new mail from a connected mailbox right now instead of waiting for the periodic sync."""
+        return c().connections.sync(connection_id)
+
+    @mcp.tool()
+    @guarded
     def send_email(inbox_id: str, to: list[str], subject: str, text: str, html: str | None = None,
                    cc: list[str] | None = None, attachment_ids: list[str] | None = None) -> dict:
         """Send an email from an inbox. Returns {id, thread_id, status}. status may be pending_approval
