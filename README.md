@@ -91,3 +91,7 @@ pre-create/pre-send checks and an outbound provider override.
 ## Docs
 
 `docs/self-host.md` (production), `docs/superpowers/specs/` (design notes), `CONTRIBUTING.md`.
+
+## License
+
+Apache-2.0. Copyright 2026 Mikhail Baklanov and AgentBox contributors.
