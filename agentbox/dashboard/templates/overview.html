@@ -1,0 +1,134 @@
+{% extends "base.html" %}{% block title %}Overview{% endblock %}
+{% block content %}
+{% call m.page_head('Overview', 'Last 24 hours · ' ~ key_name) %}
+  <div class="abx-tabs boxed">
+    <a class="abx-tab {{ 'on' if view == 'activation' }}" href="/dashboard?view=activation">Activation</a>
+    <a class="abx-tab {{ 'on' if view == 'operations' }}" href="/dashboard?view=operations">Operations</a>
+    <a class="abx-tab {{ 'on' if view == 'feed' }}" href="/dashboard?view=feed">Live feed</a>
+  </div>
+  <a class="ds-button ds-button--primary ds-button--s" href="/dashboard/inboxes?create=managed">{{ m.icon('plus', 16) }}Create inbox</a>
+{% endcall %}
+
+{% if view == 'activation' %}
+<div style="display:grid;grid-template-columns:1.2fr .8fr;gap:16px">
+  <div class="ds-card ds-card--l abx-card" style="gap:16px">
+    <div style="display:flex;align-items:center;gap:12px"><div style="font-size:16px;font-weight:600">Get to your first inbound reply</div><span class="ds-badge ds-badge--accent ds-badge--s">{{ funnel_done }} of {{ funnel | length }}</span><div style="flex:1"></div><span class="muted" style="font-size:13px">{{ 'all done' if funnel_done == funnel | length else '~' ~ ((funnel | length - funnel_done) * 2) ~ ' min left' }}</span></div>
+    <div class="abx-bar"><div style="width:{{ funnel_pct }}%"></div></div>
+    <div style="display:flex;flex-direction:column">
+      {% for f in funnel %}
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--color-border-light)">
+        {% if f.state == 'done' %}<span style="width:22px;height:22px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--color-status-success);color:#fff;border:1px solid var(--color-status-success)">{{ m.icon('check', 12) }}</span>
+        {% elif f.state == 'now' %}<span style="width:22px;height:22px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--color-accent-bg);color:var(--color-accent-default);border:1px solid var(--color-accent-default)">{{ m.icon('arrowDown', 12) }}</span>
+        {% else %}<span style="width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--color-border-default)"></span>{% endif %}
+        <span style="flex:1;color:{{ 'var(--color-fg-secondary)' if f.state == 'todo' else 'var(--color-fg-primary)' }}">{{ f.label }}</span>
+        <span class="mono trunc" style="font-size:12px;color:var(--color-fg-secondary);max-width:260px">{{ f.meta }}</span>
+        {% if f.cta and f.href %}<a class="ds-button ds-button--secondary ds-button--xs" href="{{ f.href }}">{{ f.cta }}</a>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="ds-card ds-card--m abx-card" style="gap:10px">
+      <div style="display:flex;align-items:center;gap:8px;font-weight:500">{{ m.icon('terminal', 16) }} Hello world</div>
+      <pre class="abx-pre">{{ hello_code.replace('{base}', request.url.scheme ~ '://' ~ request.url.netloc) }}</pre>
+      <div style="display:flex;gap:8px"><a class="ds-button ds-button--secondary ds-button--xs" href="/dashboard/console">Open API console</a><a class="ds-button ds-button--ghost ds-button--xs" href="/dashboard/quickstart">Quickstart</a></div>
+    </div>
+    <div class="ds-card ds-card--m abx-card" style="gap:12px">
+      <div style="font-weight:500">Last 24 hours</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        {% for label, value in [('Sent', stats.sent), ('Received', stats.received), ('Delivery rate', stats.rate), ('Blocked by policy', stats.blocked)] %}
+        <div class="ds-stat ds-stat--s"><span class="ds-stat-label muted" style="font-size:12px">{{ label }}</span><span class="ds-stat-value" style="font-size:22px;font-weight:600">{{ value }}</span></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+<div class="ds-card ds-card--none abx-list">
+  <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--color-border-light);font-weight:500;gap:8px">Recent events<div style="flex:1"></div><a class="ds-button ds-button--ghost ds-button--xs" href="/dashboard/audit">Audit log</a></div>
+  {{ m.event_rows(events[:8]) }}
+</div>
+
+{% elif view == 'operations' %}
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px">
+  {% for label, value, delta, color in [
+      ('Active inboxes', stats.active, '+' ~ stats.new_week ~ ' this week', 'var(--color-status-success)'),
+      ('Sent · 24h', stats.sent, 'outbound messages', 'var(--color-fg-secondary)'),
+      ('Received · 24h', stats.received, 'inbound messages', 'var(--color-fg-secondary)'),
+      ('Delivery rate · 30d', stats.rate, stats.bounced ~ ' bounced · ' ~ stats.complained ~ ' complaint', 'var(--color-fg-secondary)'),
+      ('Webhook success · 24h', stats.wrate, stats.w_retry ~ ' retrying', 'var(--color-status-warning)' if stats.w_retry else 'var(--color-fg-secondary)')] %}
+  <div class="ds-card ds-card--m abx-card" style="gap:4px"><span class="muted" style="font-size:12px">{{ label }}</span><span style="font-size:26px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-0.01em">{{ value }}</span><span style="font-size:12px;color:{{ color }}">{{ delta }}</span></div>
+  {% endfor %}
+</div>
+<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px">
+  <div class="ds-card ds-card--m abx-card" style="gap:12px">
+    <div style="display:flex;align-items:center;gap:16px"><span style="font-weight:500">Messages, 14 days</span><div style="flex:1"></div>
+      <span class="muted" style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:8px;height:8px;border-radius:2px;background:var(--color-accent-default)"></span>sent</span>
+      <span class="muted" style="display:flex;align-items:center;gap:6px;font-size:12px"><span style="width:8px;height:8px;border-radius:2px;background:var(--data-blue)"></span>received</span></div>
+    <div style="display:flex;align-items:flex-end;gap:10px;height:160px;padding-top:8px">
+      {% for d in chart %}
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%" title="{{ d.sent }} sent · {{ d.received }} received">
+        <div style="flex:1;width:100%;display:flex;align-items:flex-end;gap:2px"><div style="flex:1;border-radius:2px 2px 0 0;background:var(--color-accent-default);height:{{ d.s }}%"></div><div style="flex:1;border-radius:2px 2px 0 0;background:var(--data-blue);height:{{ d.r }}%"></div></div>
+        <span class="faint" style="font-size:10px;font-variant-numeric:tabular-nums">{{ d.day }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="ds-card ds-card--none abx-list">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--color-border-light);font-weight:500">Outbound providers · 30d</div>
+    {% for p in providers %}
+    <div style="display:flex;flex-direction:column;gap:8px;padding:12px 16px;border-bottom:1px solid var(--color-border-light)">
+      <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:500">{{ p.name }}</span><span class="muted" style="font-size:12px">{{ p.route }}</span><div style="flex:1"></div><span class="ds-badge ds-badge--{{ p.kind }} ds-badge--xs">{{ p.status }}</span></div>
+      <div class="muted" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:12px"><span>accepted <b style="color:var(--color-fg-primary);font-weight:500">{{ p.delivered }}</b></span><span>deferred <b style="color:var(--color-fg-primary);font-weight:500">{{ p.deferred }}</b></span><span>bounced <b style="color:var(--color-fg-primary);font-weight:500">{{ p.bounced }}</b></span></div>
+      <div class="abx-bar" style="height:3px"><div style="width:{{ p.bar }}%;background:{{ 'var(--color-status-success)' if p.kind == 'success' else 'var(--color-status-warning)' }}"></div></div>
+    </div>
+    {% else %}<div class="faint" style="padding:24px 16px;font-size:13px">No outbound traffic in the last 30 days.</div>{% endfor %}
+  </div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="ds-card ds-card--none abx-list">
+    <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--color-border-light);font-weight:500">Needs attention<div style="flex:1"></div>{% if attention %}<span class="ds-badge ds-badge--warning ds-badge--xs">{{ attention | length }}</span>{% endif %}</div>
+    {% for a in attention %}
+    <a class="abx-item" href="{{ a.href }}" style="flex-direction:row;align-items:center;gap:12px">
+      <span style="display:flex;color:{{ a.color }}">{{ m.icon(a.icon) }}</span>
+      <span style="flex:1"><div style="font-weight:500">{{ a.title }}</div><div class="muted" style="font-size:12px">{{ a.sub }}</div></span>
+      <span style="display:flex;color:var(--color-fg-disabled)">{{ m.icon('chevronRight', 16) }}</span>
+    </a>
+    {% else %}<div class="faint" style="padding:24px 16px;font-size:13px">All clear.</div>{% endfor %}
+  </div>
+  <div class="ds-card ds-card--none abx-list">
+    <div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--color-border-light);font-weight:500">Most active inboxes · 24h<div style="flex:1"></div><a class="ds-button ds-button--ghost ds-button--xs" href="/dashboard/inboxes">All inboxes</a></div>
+    {% for i in top_inboxes %}
+    <a class="abx-item" href="/dashboard/inboxes/{{ i.id }}" style="display:grid;grid-template-columns:1fr 60px 60px;gap:12px;align-items:center;padding:10px 16px">
+      <span class="mono trunc" style="font-size:12px">{{ i.address }}</span><span class="muted" style="font-size:12px;text-align:right">↑ {{ i.sent }}</span><span class="muted" style="font-size:12px;text-align:right">↓ {{ i.received }}</span>
+    </a>
+    {% else %}<div class="faint" style="padding:24px 16px;font-size:13px">No inboxes yet.</div>{% endfor %}
+  </div>
+</div>
+
+{% else %}
+<div style="display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start">
+  <div class="ds-card ds-card--none abx-list">
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--color-border-light)">
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--color-status-success);animation:abx-pulse 1.6s infinite"></span>
+      <span style="font-weight:500">Event stream</span><span class="muted" style="font-size:12px">all inboxes · {{ events_today }} events today</span>
+      <div style="flex:1"></div>
+      <div class="abx-tabs">{% for f in ['all', 'inbound', 'outbound', 'policy'] %}<a class="abx-tab {{ 'on' if feed == f }}" href="/dashboard?view=feed&feed={{ f }}" style="height:24px;font-size:12px">{{ f | capitalize }}</a>{% endfor %}</div>
+    </div>
+    {{ m.event_rows(events, cols="70px 16px 210px 1fr 120px", show_id=True) }}
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="ds-card ds-card--m abx-card" style="gap:12px">
+      {% for label, value in [('Active inboxes', stats.active), ('Sent · 24h', stats.sent), ('Received · 24h', stats.received), ('Delivery rate', stats.rate), ('Webhook success', stats.wrate)] %}
+      <div style="display:flex;align-items:baseline;gap:8px"><span class="muted" style="flex:1;font-size:13px">{{ label }}</span><span style="font-weight:600;font-size:18px;font-variant-numeric:tabular-nums">{{ value }}</span></div>
+      {% endfor %}
+    </div>
+    <div class="ds-card ds-card--m abx-card" style="gap:10px">
+      <div style="font-weight:500">Webhook health · 24h</div>
+      {% for h in hooks %}<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="width:8px;height:8px;border-radius:50%;background:{{ 'var(--color-status-success)' if h.ok else 'var(--color-status-error)' }}"></span><span class="mono trunc" style="flex:1">{{ h.host }}</span><span class="muted">{{ h.rate }}</span></div>
+      {% else %}<div class="faint" style="font-size:12px">No endpoints registered.</div>{% endfor %}
+      <a class="ds-button ds-button--secondary ds-button--xs" href="/dashboard/webhooks">Manage endpoints</a>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

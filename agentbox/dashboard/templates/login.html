@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}Sign in{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;justify-content:center;min-height:80vh">
+<div class="ds-card ds-card--l abx-card" style="width:440px;gap:16px">
+  <div style="display:flex;align-items:center;gap:10px"><span style="width:28px;height:28px;border-radius:6px;background:var(--color-accent-default);display:flex;align-items:center;justify-content:center;color:#fff">{{ m.icon('mail') }}</span><span style="font-weight:600;font-size:16px">AgentBox Console</span></div>
+  <div><div style="font-size:18px;font-weight:600">Sign in with an API key</div><div class="muted" style="font-size:13px">The console acts with the key's scopes. Nothing leaves this server.</div></div>
+  {% if error %}<div class="ds-alert ds-alert--error" style="padding:10px 12px;border-radius:6px;background:var(--color-status-error-bg);color:var(--color-status-error)">{{ error }}</div>{% endif %}
+  <form method="post" action="/dashboard/login" style="display:flex;flex-direction:column;gap:12px">
+    <label class="abx-field"><span>API key</span><input class="abx-input mono" type="password" name="api_key" placeholder="ab_live_…" autofocus required></label>
+    <button class="ds-button ds-button--primary ds-button--m" style="justify-content:center">Sign in</button>
+  </form>
+  <div class="muted" style="font-size:12px">No key yet? Run <span class="mono">agentbox org create "My Org"</span> on the server.</div>
+</div></div>
+{% endblock %}

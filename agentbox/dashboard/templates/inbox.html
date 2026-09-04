@@ -1,0 +1,99 @@
+{% extends "base.html" %}{% block title %}{{ inbox.address }}{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;gap:12px">
+  <a class="ds-button ds-button--ghost ds-button--s ds-button--icon-only" href="/dashboard/inboxes">{{ m.icon('chevronLeft', 16) }}</a>
+  <div style="flex:1;min-width:0">
+    <div style="display:flex;align-items:center;gap:10px"><h1 class="mono trunc" style="margin:0;font-size:20px;font-weight:600;letter-spacing:-0.01em">{{ inbox.address }}</h1><span class="{{ badge(inbox.status) }}">{{ inbox.status }}</span><span class="ds-badge ds-badge--default ds-badge--s">{{ mode }}</span></div>
+    <div class="mono muted" style="font-size:13px;margin-top:2px">{{ inbox.id }}{% if inbox.metadata_ %} · {% for k, v in inbox.metadata_.items() %}{{ k }}={{ v }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}</div>
+  </div>
+  <a class="ds-button ds-button--secondary ds-button--s" href="/dashboard/inboxes/{{ inbox.id }}?send=1">Send test email</a>
+  <form method="post" action="/dashboard/inboxes/{{ inbox.id }}/status" style="display:flex;gap:8px">
+    {% if inbox.status == 'active' %}<button class="ds-button ds-button--ghost ds-button--s" name="action" value="disable">Disable</button>{% elif inbox.status == 'suspended' %}<button class="ds-button ds-button--ghost ds-button--s" name="action" value="enable">Enable</button>{% endif %}
+    <button class="ds-button ds-button--ghost ds-button--s" name="action" value="delete" style="color:var(--color-status-error)" onclick="return confirm('Delete this inbox?')">Delete</button>
+  </form>
+</div>
+<div class="abx-tabs" style="border-bottom:1px solid var(--color-border-light);padding-bottom:8px">
+  {% for t in ['threads', 'policies', 'events', 'metadata'] %}<a class="abx-tab {{ 'on' if tab == t }}" href="/dashboard/inboxes/{{ inbox.id }}?tab={{ t }}">{{ t | capitalize }}</a>{% endfor %}
+</div>
+
+{% if tab == 'threads' %}
+<div style="display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start">
+  <div class="ds-card ds-card--none abx-list">
+    {% for t in threads %}
+    <a class="abx-item {{ 'on' if current and t.id == current.id }}" href="/dashboard/inboxes/{{ inbox.id }}?thread={{ t.id }}">
+      <div style="display:flex;gap:8px;align-items:center"><span class="trunc" style="flex:1;font-weight:500">{{ t.subject or '(no subject)' }}</span><span class="faint" style="font-size:11px">{{ ago(t.last_message_at) }}</span></div>
+      <div class="muted" style="display:flex;gap:8px;align-items:center;font-size:12px"><span class="trunc" style="flex:1">{{ t.participants | join(', ') or '—' }}</span><span class="ds-badge ds-badge--default ds-badge--xs">{{ t.message_count }}</span>{% if t.id in att_threads %}<span style="display:flex">{{ m.icon('paperclip', 14) }}</span>{% endif %}</div>
+    </a>
+    {% else %}<div class="faint" style="padding:32px 16px;font-size:13px;text-align:center">No threads yet. Send a test email or deliver mail to this address.</div>{% endfor %}
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    {% if current %}
+    <div style="display:flex;align-items:center;gap:10px"><div style="font-size:16px;font-weight:600;flex:1">{{ current.subject or '(no subject)' }}</div><span class="mono faint" style="font-size:12px">{{ current.id }}</span></div>
+    {% for item in messages %}{% set msg = item.m %}
+    <div class="ds-card ds-card--m abx-card abx-msg" style="gap:10px;border-left-color:{{ item.edge }}">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap">
+        <span style="display:flex;color:var(--color-fg-secondary)">{{ m.icon(item.icon, 14) }}</span>
+        <span style="font-weight:500">{{ msg.from_address.email }}</span><span class="faint">→</span><span class="muted trunc" style="max-width:320px">{{ item.to }}</span>
+        <div style="flex:1"></div>
+        <span class="{{ badge(msg.status, 'xs') }}">{{ msg.status }}</span>
+        <span class="faint" style="font-variant-numeric:tabular-nums">{{ hhmm(msg.received_at or msg.sent_at or msg.created_at) }}</span>
+      </div>
+      <div style="white-space:pre-wrap">{{ msg.text_body or '' }}</div>
+      {% if item.html %}<details><summary class="muted" style="font-size:12px;cursor:pointer">HTML (sanitized)</summary><div class="abx-email" style="margin-top:8px">{{ item.html | safe }}</div></details>{% endif %}
+      {% if item.attachments %}<div style="display:flex;gap:8px;flex-wrap:wrap">{% for a in item.attachments %}<a class="abx-chip" href="/dashboard/api/messages/{{ msg.id }}/attachments/{{ a.id }}">{{ m.icon('paperclip', 12) }}{{ a.filename }}<span class="faint">{{ (a.size_bytes / 1024) | round(0) | int }} KB</span></a>{% endfor %}</div>{% endif %}
+      <div class="mono faint" style="display:flex;gap:6px;font-size:11px"><a href="/dashboard/messages/{{ msg.id }}" style="color:inherit">{{ msg.id }}</a><span>·</span><span>{{ msg.provider or ('inbound' if msg.direction == 'inbound' else 'queued') }}</span>{% if msg.error_code %}<span>·</span><span style="color:var(--color-status-error)">{{ msg.error_code }}</span>{% endif %}</div>
+    </div>
+    {% endfor %}
+    {% if reply_target %}
+    <form method="post" action="/dashboard/inboxes/{{ inbox.id }}/reply" class="ds-card ds-card--m abx-card" style="gap:10px">
+      <input type="hidden" name="message_id" value="{{ reply_target.id }}">
+      <div class="muted" style="display:flex;gap:8px;align-items:center;font-size:13px;flex-wrap:wrap">{{ m.icon('reply', 14) }} Reply as <span class="mono" style="color:var(--color-fg-primary)">{{ inbox.address }}</span> to <span class="mono">{{ reply_target.id }}</span> · <label style="display:flex;align-items:center;gap:4px"><input type="checkbox" name="reply_all" style="margin:0"> reply_all</label></div>
+      <textarea class="abx-textarea" name="text" placeholder="Type a reply — headers, threading and recipients are handled for you" style="font-family:Inter,sans-serif;font-size:14px"></textarea>
+      <div style="display:flex;gap:8px;align-items:center"><div style="flex:1"></div><span class="muted" style="font-size:12px">In-Reply-To, References and Re: are added automatically</span><button class="ds-button ds-button--primary ds-button--s">Send reply</button></div>
+    </form>
+    {% endif %}
+    {% else %}<div class="faint" style="padding:48px;text-align:center;font-size:13px">Select a thread.</div>{% endif %}
+  </div>
+</div>
+
+{% elif tab == 'policies' %}
+<div class="ds-alert ds-alert--info" style="display:flex;gap:10px;padding:12px 16px;border-radius:6px;background:var(--color-status-info-bg);color:var(--color-status-info);align-items:center">{{ m.icon('shield', 16) }}<span style="color:var(--color-fg-primary)">Inbox policy inherits from the <b style="font-weight:500">organization</b> policy. Overrides below apply only to this inbox.</span><div style="flex:1"></div><a class="ds-button ds-button--ghost ds-button--xs" href="/dashboard/policies?scope={{ inbox.id }}">Edit as form</a></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="ds-card ds-card--m abx-card" style="gap:12px">
+    <div style="font-weight:500">Recipient policy</div>
+    <div class="muted" style="font-size:12px">Allowed domains</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">{% for d in policy.recipient_policy.allowed_domains %}<span class="ds-badge ds-badge--success ds-badge--s">{{ d }}</span>{% else %}<span class="faint" style="font-size:12px">any domain</span>{% endfor %}</div>
+    <div class="muted" style="font-size:12px">Blocked domains</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">{% for d in policy.recipient_policy.blocked_domains %}<span class="ds-badge ds-badge--error ds-badge--s">{{ d }}</span>{% else %}<span class="faint" style="font-size:12px">none</span>{% endfor %}</div>
+    <div class="muted" style="font-size:12px">Approval gates: new recipient <b style="color:var(--color-fg-primary)">{{ 'on' if policy.approval.new_recipient else 'off' }}</b> · external domain <b style="color:var(--color-fg-primary)">{{ 'on' if policy.approval.external_domain else 'off' }}</b></div>
+  </div>
+  <div class="ds-card ds-card--m abx-card" style="gap:12px">
+    <div style="font-weight:500">Limits · used now</div>
+    {% for l in limits %}<div style="display:flex;align-items:center;gap:12px;font-size:13px"><span class="muted" style="flex:1">{{ l.label }}</span><span style="font-variant-numeric:tabular-nums">{{ l.used }} / {{ l.max if l.max is not none else '∞' }}</span><div class="abx-bar" style="width:120px"><div style="width:{{ l.pct }}%"></div></div></div>{% endfor %}
+    <div class="muted" style="font-size:12px">per thread / hour: {{ policy.limits.per_thread_per_hour }} · send {{ 'enabled' if policy.send_enabled else 'disabled' }} · receive {{ 'enabled' if policy.receive_enabled else 'disabled' }}</div>
+  </div>
+</div>
+<form method="post" action="/dashboard/inboxes/{{ inbox.id }}/policy" class="ds-card ds-card--m abx-card" style="gap:10px">
+  <div style="font-weight:500">Inbox overrides (JSON)</div>
+  <textarea class="abx-textarea" name="config" style="min-height:140px">{{ policy_config }}</textarea>
+  <div style="display:flex;gap:8px;align-items:center"><span class="muted" style="font-size:12px">Empty object removes all overrides.</span><div style="flex:1"></div><button class="ds-button ds-button--primary ds-button--s">Save inbox policy</button></div>
+</form>
+
+{% elif tab == 'events' %}
+<div class="ds-card ds-card--none abx-list">{{ m.event_rows(events) }}</div>
+
+{% else %}
+<div class="ds-card ds-card--m abx-card" style="max-width:640px"><pre class="abx-pre" style="line-height:1.7">{{ inbox_json }}</pre></div>
+{% endif %}
+
+{% if send %}
+{% call m.modal('Send test email', '/dashboard/inboxes/' ~ inbox.id) %}
+  <form method="post" action="/dashboard/inboxes/{{ inbox.id }}/send" style="display:flex;flex-direction:column;gap:12px">
+    <label class="abx-field"><span>To (comma separated)</span><input class="abx-input" name="to" placeholder="you@example.com" required></label>
+    <label class="abx-field"><span>Subject</span><input class="abx-input" name="subject" value="Hello from {{ inbox.username }}"></label>
+    <label class="abx-field"><span>Text</span><textarea class="abx-textarea" name="text" style="font-family:Inter,sans-serif;font-size:14px">This message was sent by an AI agent through AgentBox.</textarea></label>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><a class="ds-button ds-button--ghost ds-button--s" href="/dashboard/inboxes/{{ inbox.id }}">Cancel</a><button class="ds-button ds-button--primary ds-button--s">Send</button></div>
+  </form>
+{% endcall %}
+{% endif %}
+{% endblock %}

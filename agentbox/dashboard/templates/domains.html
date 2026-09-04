@@ -1,0 +1,44 @@
+{% extends "base.html" %}{% block title %}Domains{% endblock %}
+{% block content %}
+{% call m.page_head('Domains', 'DNS is re-checked every ' ~ recheck ~ ' minutes while pending. Verified domains degrade, never delete.') %}<a class="ds-button ds-button--primary ds-button--s" href="/dashboard/domains?add=1">{{ m.icon('plus', 16) }}Add domain</a>{% endcall %}
+<div style="display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start">
+  <div class="ds-card ds-card--none abx-list">
+    {% for d in domains %}
+    <a class="abx-item {{ 'on' if current and d.id == current.id }}" href="/dashboard/domains?domain={{ d.id }}" style="gap:6px;padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:8px"><span class="mono" style="font-weight:500;flex:1">{{ d.domain }}</span><span class="{{ badge(d.status, 'xs') }}">{{ 'verified' if d.status == 'active' and d.type == 'customer_custom' else ('managed' if d.type == 'agentbox_managed' else d.status.replace('_', ' ')) }}</span></div>
+      <div class="muted" style="font-size:12px">{{ d.type }} · {{ counts.get(d.id, 0) }} inboxes</div>
+    </a>
+    {% endfor %}
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    {% if current %}
+    <div style="display:flex;align-items:center;gap:10px"><span class="mono" style="font-size:18px;font-weight:600">{{ current.domain }}</span><span class="{{ badge(current.status) }}">{{ current.status.replace('_', ' ') }}</span><div style="flex:1"></div>
+      {% if current.type == 'customer_custom' %}<form method="post" action="/dashboard/domains/{{ current.id }}/action" style="display:flex;gap:8px"><button class="ds-button ds-button--secondary ds-button--xs" name="action" value="verify">{{ m.icon('refresh', 14) }}Re-check now</button><button class="ds-button ds-button--ghost ds-button--xs" name="action" value="delete" style="color:var(--color-status-error)" onclick="return confirm('Delete domain?')">Delete</button></form>{% endif %}</div>
+    {% if current.last_checked_at %}<div class="muted" style="font-size:12px">last check {{ ago(current.last_checked_at) }} · next {{ hhmm(current.next_check_at) }}</div>{% endif %}
+    <div class="ds-card ds-card--none abx-list">
+      <div class="abx-grid-head" style="grid-template-columns:70px 1fr 1.4fr 110px"><span>Type</span><span>Name</span><span>Value</span><span>Status</span></div>
+      {% for r in dns %}
+      <div class="abx-grid-row" style="grid-template-columns:70px 1fr 1.4fr 110px">
+        <span class="ds-badge ds-badge--default ds-badge--xs" style="justify-self:start">{{ r.type }}{% if r.priority %} {{ r.priority }}{% endif %}</span>
+        <span class="mono trunc" style="font-size:12px">{{ r.name }}</span>
+        <span class="mono trunc muted" style="font-size:12px" title="{{ r.value }}">{{ r.value }}</span>
+        <span class="ds-badge ds-badge--{{ r.kind }} ds-badge--xs" style="justify-self:start">{{ r.status }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="ds-card ds-card--m abx-card" style="gap:8px"><div style="font-weight:500">Inbound</div><div class="muted" style="font-size:13px">MX → {{ mx_hosts }}<br>Native SMTP edge · raw MIME retained · VERP bounce handling</div></div>
+      <div class="ds-card ds-card--m abx-card" style="gap:8px"><div style="font-weight:500">Outbound routing</div><div class="muted" style="font-size:13px">{% for r in routing %}{{ r }}<br>{% endfor %}default → {{ default_provider }}</div></div>
+    </div>
+    {% else %}<div class="faint" style="padding:48px;text-align:center">No domains yet.</div>{% endif %}
+  </div>
+</div>
+{% if add %}
+{% call m.modal('Add domain', '/dashboard/domains') %}
+  <form method="post" action="/dashboard/domains" style="display:flex;flex-direction:column;gap:12px">
+    <label class="abx-field"><span>Domain</span><input class="abx-input mono" name="domain" placeholder="agents.company.ru" required autofocus><span>You will get the TXT, MX, SPF and DMARC records to publish. The domain becomes active once ownership and MX are verified.</span></label>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><a class="ds-button ds-button--ghost ds-button--s" href="/dashboard/domains">Cancel</a><button class="ds-button ds-button--primary ds-button--s">Add domain</button></div>
+  </form>
+{% endcall %}
+{% endif %}
+{% endblock %}

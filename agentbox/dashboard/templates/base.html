@@ -1,0 +1,88 @@
+{% import "_macros.html" as m with context %}<!doctype html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}AgentBox{% endblock %} · AgentBox Console</title>
+<link rel="icon" type="image/svg+xml" href="/dashboard/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600&family=Fira+Code:wght@400;500&display=swap">
+<link rel="stylesheet" href="/dashboard/static/ds.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--color-surface-0);color:var(--color-fg-primary);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px;line-height:1.5}
+a{color:var(--color-accent-default);text-decoration:none}a:hover{color:var(--color-accent-hover)}
+.mono{font-family:var(--font-mono)}.trunc{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.muted{color:var(--color-fg-secondary)}.faint{color:var(--color-fg-disabled)}
+.abx-shell{display:flex;min-height:100vh}
+.abx-side{width:232px;flex:none;display:flex;flex-direction:column;border-right:1px solid var(--color-border-light);background:var(--color-surface-1);position:sticky;top:0;height:100vh;padding:16px 12px;gap:4px}
+.abx-nav{display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border:0;border-radius:6px;background:transparent;color:var(--color-fg-secondary);font:inherit;font-weight:500;text-align:left;width:100%;cursor:pointer}
+.abx-nav:hover{background:var(--color-state-hover);color:var(--color-fg-primary)}.abx-nav.on{background:var(--color-state-selected);color:var(--color-fg-primary)}
+.abx-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.abx-head{height:56px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;border-bottom:1px solid var(--color-border-light);position:sticky;top:0;background:var(--color-surface-0);z-index:5}
+.abx-content{padding:24px 24px 48px;display:flex;flex-direction:column;gap:20px;max-width:1360px;width:100%}
+.abx-card{background:var(--color-surface-1)}.abx-list{background:var(--color-surface-1);overflow:hidden}
+.abx-row:hover{background:var(--color-state-hover)}.abx-item{display:flex;flex-direction:column;gap:4px;width:100%;padding:12px 16px;border:0;border-bottom:1px solid var(--color-border-light);background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.abx-item:hover{background:var(--color-state-hover);color:inherit}.abx-item.on{background:var(--color-state-selected)}
+.abx-bar{height:4px;border-radius:2px;background:var(--color-state-selected);overflow:hidden}.abx-bar>div{height:100%;background:var(--color-accent-default)}
+.abx-pre{margin:0;padding:12px;border-radius:4px;background:var(--color-surface-0);font-family:var(--font-mono);font-size:12px;line-height:1.6;color:var(--color-fg-primary);overflow:auto;white-space:pre-wrap;word-break:break-word}
+.abx-grid-head{display:grid;gap:12px;padding:10px 16px;background:var(--color-surface-2);font-size:12px;color:var(--color-fg-secondary)}
+.abx-grid-row{display:grid;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--color-border-light);font-size:13px}
+.abx-field{display:flex;flex-direction:column;gap:6px}.abx-field>span{font-size:12px;color:var(--color-fg-secondary)}
+.abx-input,.abx-textarea,.abx-select{height:36px;padding:0 10px;border:1px solid var(--color-border-default);border-radius:4px;background:var(--color-surface-0);color:inherit;font:inherit;width:100%;outline:none}
+.abx-input:focus,.abx-textarea:focus,.abx-select:focus{border-color:var(--color-border-focus)}.abx-textarea{height:auto;min-height:72px;padding:10px;resize:vertical;font-family:var(--font-mono);font-size:12px;line-height:1.6}
+.abx-overlay{position:fixed;inset:0;background:var(--color-overlay);z-index:300;display:flex;align-items:center;justify-content:center}
+.abx-modal{width:520px;max-width:calc(100vw - 32px);background:var(--color-surface-1);box-shadow:var(--shadow-3);gap:16px;max-height:calc(100vh - 32px);overflow:auto}
+.abx-toast{position:fixed;right:24px;bottom:24px;z-index:500;display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:6px;background:var(--color-surface-3);box-shadow:var(--shadow-2);font-size:13px;color:var(--color-fg-primary);animation:abx-toast 6s forwards}
+@keyframes abx-toast{0%,80%{opacity:1}100%{opacity:0;visibility:hidden}}
+@keyframes abx-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.abx-tabs{display:flex;gap:2px}.abx-tab{display:inline-flex;align-items:center;height:28px;padding:0 10px;border-radius:4px;font-size:13px;font-weight:500;color:var(--color-fg-secondary)}.abx-tab:hover{background:var(--color-state-hover);color:var(--color-fg-primary)}.abx-tab.on{background:var(--color-state-selected);color:var(--color-fg-primary)}
+.abx-tabs.boxed{gap:4px;background:var(--color-surface-1);padding:3px;border-radius:6px}
+.ds-button{display:inline-flex;align-items:center;gap:6px}a.ds-button:hover{color:inherit}
+.abx-msg{border-left:2px solid var(--color-border-default)}
+.abx-email{max-width:100%;overflow:auto}.abx-email img{max-width:100%}
+.abx-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:1px solid var(--color-border-default);border-radius:4px;font-size:12px;font-family:var(--font-mono);color:inherit}
+@media (max-width:900px){.abx-side{display:none}.abx-content{padding:16px}}
+</style>
+</head>
+<body>
+<div class="abx-shell">
+{% if principal %}
+<aside class="abx-side">
+  <a href="/dashboard" style="display:flex;align-items:center;gap:10px;padding:6px 8px;margin-bottom:16px;color:inherit">
+    <span style="width:28px;height:28px;flex:none;border-radius:6px;background:var(--color-accent-default);display:flex;align-items:center;justify-content:center;color:#fff">{{ m.icon('mail') }}</span>
+    <span style="font-weight:600;font-size:16px;letter-spacing:-0.01em">AgentBox</span>
+  </a>
+  {% for id, label, ic, href in nav %}<a class="abx-nav {{ 'on' if page == id }}" href="{{ href }}">{{ m.icon(ic) }}<span style="flex:1;white-space:nowrap">{{ label }}</span></a>{% endfor %}
+  <div style="flex:1"></div>
+  {% include "ee/nav.html" ignore missing %}
+  {% for id, label, ic, href in nav2 %}<a class="abx-nav {{ 'on' if page == id }}" href="{{ href }}">{{ m.icon(ic) }}<span style="flex:1;white-space:nowrap">{{ label }}</span></a>{% endfor %}
+  <a class="ds-card ds-card--s" href="{{ paths.usage }}" style="margin-top:12px;gap:6px;background:var(--color-surface-2);border-color:transparent;color:inherit">
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--color-fg-secondary)"><span>{{ org_plan }} plan</span><span>{{ active_inboxes }}{% if inbox_cap %} / {{ inbox_cap }}{% endif %}</span></div>
+    <div class="abx-bar"><div style="width:{{ ([active_inboxes * 100 // inbox_cap, 100] | min) if inbox_cap else ([active_inboxes * 4, 100] | min) }}%"></div></div>
+    <div style="font-size:12px;color:var(--color-fg-secondary)">active inboxes{{ plan_note }}</div>
+  </a>
+</aside>
+{% endif %}
+<div class="abx-main">
+  {% if principal %}
+  <header class="abx-head">
+    <nav style="display:flex;align-items:center;font-size:14px;color:var(--color-fg-secondary)">
+      <span>{{ org_name }}</span><span style="padding:0 8px;color:var(--color-fg-disabled)">/</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;color:var(--color-fg-primary)">{{ key_name }} <span class="ds-badge ds-badge--{{ 'success' if env == 'live' else 'info' }} ds-badge--xs">{{ env }}</span></span>
+    </nav>
+    <div style="flex:1"></div>
+    <form method="get" action="/dashboard/search" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid var(--color-border-default);border-radius:4px;color:var(--color-fg-secondary);width:280px;font-size:13px">{{ m.icon('search', 16) }}<input name="q" placeholder="Search inboxes, threads, message ids" value="{{ q if page == 'search' else '' }}" style="flex:1;border:0;background:none;color:inherit;font:inherit;outline:none;min-width:0"></form>
+    <form method="post" action="/dashboard/theme"><input type="hidden" name="next" value="{{ path }}"><button class="ds-button ds-button--ghost ds-button--s ds-button--icon-only" title="Toggle theme">{{ m.icon('sun' if theme == 'dark' else 'moon', 16) }}</button></form>
+    <a href="/docs" class="ds-button ds-button--ghost ds-button--s">Docs</a>
+    <form method="post" action="{{ paths.logout }}"><button class="ds-button ds-button--ghost ds-button--s ds-button--icon-only" title="Log out">{{ m.icon('logout', 16) }}</button></form>
+    <span class="ds-avatar" style="width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;background:var(--color-surface-3);border-radius:50%;font-size:11px;font-weight:500">{{ initials }}</span>
+  </header>
+  {% endif %}
+  <main class="abx-content">
+  {% include "ee/banner.html" ignore missing %}
+  {% block content %}{% endblock %}</main>
+</div>
+</div>
+{% if toast %}<div class="abx-toast"><span style="display:flex;color:var(--color-status-success)">{{ m.icon('check', 16) }}</span>{{ toast }}</div>{% endif %}
+</body>
+</html>

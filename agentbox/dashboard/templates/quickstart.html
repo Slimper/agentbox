@@ -1,0 +1,30 @@
+{% extends "base.html" %}{% block title %}Quickstart{% endblock %}
+{% block content %}
+{% call m.page_head('Quickstart', 'First inbox and first email in under five minutes. No DNS required.') %}{% endcall %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  {% for q in steps %}
+  <div class="ds-card ds-card--m abx-card" style="gap:10px">
+    <div style="display:flex;align-items:center;gap:10px"><span style="width:24px;height:24px;border-radius:50%;background:var(--color-accent-bg);color:var(--color-accent-default);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600">{{ q.n }}</span><span style="font-weight:500">{{ q.title }}</span><div style="flex:1"></div>{% if q.done %}<span class="ds-badge ds-badge--success ds-badge--xs">done</span>{% endif %}</div>
+    <div class="muted" style="font-size:13px">{{ q.sub }}</div>
+    <pre class="abx-pre">{{ q.code }}</pre>
+  </div>
+  {% endfor %}
+</div>
+<div class="ds-card ds-card--m abx-card" style="gap:10px">
+  <div style="display:flex;align-items:center;gap:8px;font-weight:500">{{ m.icon('bot', 16) }} Use it from an agent via MCP</div>
+  <pre class="abx-pre">pip install './sdk/python[mcp]'
+AGENTBOX_API_KEY=ab_live_... AGENTBOX_API_URL={{ base_url }} agentbox-mcp
+# tools: create_inbox · send_email · reply_email · forward_email · get_thread · list_messages · wait_for_email · read_email · download_attachment</pre>
+</div>
+<div class="ds-card ds-card--m abx-card" style="gap:10px">
+  <div style="display:flex;align-items:center;gap:8px;font-weight:500">{{ m.icon('inbox', 16) }} Simulate an inbound reply locally</div>
+  <div class="muted" style="font-size:13px">Any SMTP client can deliver to the edge on port {{ smtp_port }}. The message lands in the inbox thread and fires <span class="mono">message.received</span>.</div>
+  <pre class="abx-pre">python - &lt;&lt;'PY'
+import smtplib
+from email.message import EmailMessage
+m = EmailMessage(); m["From"] = "Vendor &lt;vendor@example.com&gt;"; m["To"] = "your-agent@{{ managed_domain }}"
+m["Subject"] = "Re: hello"; m.set_content("Reply from the outside world")
+with smtplib.SMTP("localhost", {{ smtp_port }}) as s: s.send_message(m)
+PY</pre>
+</div>
+{% endblock %}

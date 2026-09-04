@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block title %}{{ msg.subject or msg.id }}{% endblock %}
+{% block content %}
+<div style="display:flex;align-items:center;gap:12px">
+  <a class="ds-button ds-button--ghost ds-button--s ds-button--icon-only" href="/dashboard/inboxes/{{ msg.inbox_id }}?thread={{ msg.thread_id }}">{{ m.icon('chevronLeft', 16) }}</a>
+  <div style="flex:1;min-width:0"><h1 class="trunc" style="margin:0;font-size:20px;font-weight:600">{{ msg.subject or '(no subject)' }}</h1><div class="mono muted" style="font-size:13px">{{ msg.id }} · {{ msg.direction }}</div></div>
+  <span class="{{ badge(msg.status) }}">{{ msg.status }}</span>
+  {% if msg.status == 'pending_approval' %}<form method="post" action="/dashboard/messages/{{ msg.id }}/approval" style="display:flex;gap:8px"><button class="ds-button ds-button--primary ds-button--s" name="action" value="approve">Approve</button><button class="ds-button ds-button--danger ds-button--s" name="action" value="reject">Reject</button></form>{% endif %}
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+  <div class="ds-card ds-card--m abx-card" style="gap:6px;font-size:13px">
+    {% for k, v in [('Message-ID', msg.internet_message_id), ('In-Reply-To', msg.in_reply_to or ''), ('From', msg.from_address.email), ('To', msg.to_addresses | map(attribute='email') | join(', ')), ('Cc', msg.cc_addresses | map(attribute='email') | join(', ')), ('Provider', (msg.provider or '—') ~ ' ' ~ (msg.provider_message_id or '')), ('Error', (msg.error_code or '') ~ ' ' ~ (msg.error_message or '')), ('Size', msg.size_bytes ~ ' B')] %}
+    <div style="display:flex;gap:12px"><span class="muted" style="width:110px;flex:none">{{ k }}</span><span class="mono trunc" style="font-size:12px">{{ v }}</span></div>
+    {% endfor %}
+    <details style="margin-top:6px"><summary class="muted" style="cursor:pointer;font-size:12px">Raw headers</summary><pre class="abx-pre" style="margin-top:8px">{% for h in msg.headers %}{{ h[0] }}: {{ h[1] }}
+{% endfor %}</pre></details>
+  </div>
+  <div class="ds-card ds-card--none abx-list"><div style="padding:12px 16px;border-bottom:1px solid var(--color-border-light);font-weight:500">Lifecycle</div>
+    {% for e in events %}<div style="display:grid;grid-template-columns:16px 200px 1fr;gap:12px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--color-border-light);font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:{{ e.dot }}"></span><span class="mono" style="font-size:12px">{{ e.type }}</span><span class="faint" style="text-align:right">{{ e.time }}</span></div>{% endfor %}
+  </div>
+</div>
+<div class="ds-card ds-card--m abx-card" style="gap:10px">
+  <div style="white-space:pre-wrap">{{ msg.text_body or '' }}</div>
+  {% if html %}<details><summary class="muted" style="cursor:pointer;font-size:12px">HTML (sanitized)</summary><div class="abx-email" style="margin-top:8px">{{ html | safe }}</div></details>{% endif %}
+  {% if attachments %}<div style="display:flex;gap:8px;flex-wrap:wrap">{% for a in attachments %}<a class="abx-chip" href="/dashboard/api/messages/{{ msg.id }}/attachments/{{ a.id }}">{{ m.icon('paperclip', 12) }}{{ a.filename }}<span class="faint">{{ a.content_type }} · {{ a.size_bytes }} B</span></a>{% endfor %}</div>{% endif %}
+</div>
+{% endblock %}

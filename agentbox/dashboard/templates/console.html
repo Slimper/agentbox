@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block title %}API console{% endblock %}
+{% block content %}
+{% call m.page_head('API Console', 'Runs against this server with your session key. Idempotency keys are generated per request.') %}{% endcall %}
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="ds-card ds-card--none abx-list">
+      {% for e in endpoints %}
+      <a class="abx-item {{ 'on' if loop.index0 == ep }}" href="/dashboard/console?ep={{ loop.index0 }}&lang={{ lang }}" style="flex-direction:row;align-items:center;gap:10px;padding:10px 14px">
+        <span class="ds-badge ds-badge--{{ 'info' if e.method == 'GET' else 'accent' }} ds-badge--xs mono" style="width:52px;justify-content:center">{{ e.method }}</span><span class="mono trunc" style="font-size:13px;flex:1">{{ e.path }}</span><span class="muted" style="font-size:12px">{{ e.desc }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    <form method="post" action="/dashboard/console/run" class="ds-card ds-card--m abx-card" style="gap:8px">
+      <input type="hidden" name="ep" value="{{ ep }}"><input type="hidden" name="lang" value="{{ lang }}">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px"><span style="font-weight:500">Request</span><span class="mono muted" style="font-size:12px">{{ endpoint.method }} {{ path }}</span><div style="flex:1"></div><span class="mono faint" style="font-size:11px">Idempotency-Key: {{ idem }}</span></div>
+      {% if needs_id %}<label class="abx-field"><span>Resource id ({id})</span><input class="abx-input mono" name="resource_id" value="{{ resource_id }}" placeholder="ibx_… / msg_… / thr_… / att_…" style="height:32px;font-size:12px"></label>{% endif %}
+      {% if endpoint.method != 'GET' %}<textarea class="abx-textarea" name="body" style="min-height:140px">{{ body }}</textarea>{% else %}<div class="faint" style="font-size:12px">No request body.</div>{% endif %}
+      <div style="display:flex;gap:8px"><button class="ds-button ds-button--primary ds-button--s">{{ m.icon('zap', 14) }}Run request</button><a class="ds-button ds-button--ghost ds-button--s" href="/dashboard/console?ep={{ ep }}&lang={{ lang }}">Reset</a></div>
+    </form>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="ds-card ds-card--none abx-list">
+      <div style="display:flex;align-items:center;gap:2px;padding:8px 8px 0">{% for l, label in [('curl', 'curl'), ('python', 'Python'), ('ts', 'TypeScript')] %}<a class="abx-tab {{ 'on' if lang == l }}" href="/dashboard/console?ep={{ ep }}&lang={{ l }}&resource_id={{ resource_id }}" style="height:24px;font-size:12px">{{ label }}</a>{% endfor %}</div>
+      <pre class="abx-pre" style="background:transparent;padding:14px 16px;line-height:1.65">{{ snippets[lang] }}</pre>
+    </div>
+    <div class="ds-card ds-card--none abx-list">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--color-border-light);font-size:13px"><span style="font-weight:500">Response</span>{% if ran %}<span class="ds-badge ds-badge--{{ 'success' if ok else 'error' }} ds-badge--xs">{{ status }} {{ reason }}</span><span class="muted">{{ ms }} ms</span><div style="flex:1"></div><span class="mono faint" style="font-size:11px">AgentBox-Request-Id: {{ request_id }}</span>{% endif %}</div>
+      {% if ran %}<pre class="abx-pre" style="background:transparent;padding:14px 16px;line-height:1.65">{{ response }}</pre>{% else %}<div class="faint" style="padding:32px;text-align:center;font-size:13px">Run the request to see the live response</div>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

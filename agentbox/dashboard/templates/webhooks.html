@@ -1,0 +1,50 @@
+{% extends "base.html" %}{% block title %}Webhooks{% endblock %}
+{% block content %}
+{% call m.page_head('Webhooks', 'Signed with HMAC-SHA256 · at-least-once · retries over 24h') %}<a class="ds-button ds-button--primary ds-button--s" href="/dashboard/webhooks?create=1">{{ m.icon('plus', 16) }}Add endpoint</a>{% endcall %}
+{% if new_secret %}<div class="ds-alert ds-alert--warning" style="display:flex;gap:12px;padding:14px 16px;border-radius:6px;background:var(--color-status-warning-bg);color:var(--color-status-warning);align-items:center">{{ m.icon('alert', 18) }}<div style="flex:1;color:var(--color-fg-primary)"><div style="font-weight:500">Copy the signing secret now — it will not be shown again</div><div class="mono" style="font-size:13px;margin-top:4px">{{ new_secret }}</div></div><a class="ds-button ds-button--ghost ds-button--xs ds-button--icon-only" href="/dashboard/webhooks{{ '?hook=' ~ current.id if current }}">{{ m.icon('x', 14) }}</a></div>{% endif %}
+<div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
+  <div class="ds-card ds-card--none abx-list">
+    {% for h in webhooks %}{% set st = health.get(h.id) %}
+    <a class="abx-item {{ 'on' if current and h.id == current.id }}" href="/dashboard/webhooks?hook={{ h.id }}" style="gap:6px;padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:{{ 'var(--color-fg-disabled)' if h.status != 'active' else ('var(--color-status-success)' if (st and st.ok) else 'var(--color-status-error)') }}"></span><span class="mono trunc" style="font-size:12px;flex:1">{{ h.url }}</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">{% for ev in h.event_types %}<span class="ds-badge ds-badge--default ds-badge--xs mono">{{ ev }}</span>{% endfor %}</div>
+      <div class="muted" style="font-size:12px">{{ st.rate if st else '—' }} success · {{ st.total if st else 0 }} deliveries · 24h{% if h.status != 'active' %} · disabled{% endif %}</div>
+    </a>
+    {% else %}<div class="faint" style="padding:32px 16px;text-align:center;font-size:13px">No endpoints yet.</div>{% endfor %}
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    {% if current %}
+    <div style="display:flex;align-items:center;gap:10px"><span class="mono trunc" style="font-size:15px;font-weight:500;flex:1">{{ current.url }}</span>
+      <form method="post" action="/dashboard/webhooks/{{ current.id }}/action" style="display:flex;gap:8px"><button class="ds-button ds-button--secondary ds-button--xs" name="action" value="test">Send test event</button><button class="ds-button ds-button--ghost ds-button--xs" name="action" value="rotate" onclick="return confirm('Rotate the signing secret?')">Rotate secret</button><button class="ds-button ds-button--ghost ds-button--xs" name="action" value="toggle">{{ 'Disable' if current.status == 'active' else 'Enable' }}</button><button class="ds-button ds-button--ghost ds-button--xs" name="action" value="delete" style="color:var(--color-status-error)" onclick="return confirm('Delete endpoint?')">Delete</button></form></div>
+    <div class="ds-card ds-card--none abx-list">
+      <div class="abx-grid-head" style="grid-template-columns:1fr 200px 90px 80px 90px"><span>Event</span><span>Attempt</span><span>Response</span><span>Latency</span><span></span></div>
+      {% for a in attempts %}
+      <div class="abx-grid-row" style="grid-template-columns:1fr 200px 90px 80px 90px">
+        <span style="display:flex;flex-direction:column;min-width:0"><span class="mono" style="font-size:12px">{{ a.type }}</span><span class="mono faint trunc" style="font-size:11px">{{ a.d.event_id }}</span></span>
+        <span class="muted" style="font-size:12px">#{{ a.d.attempt_number }} · {{ hhmm(a.d.scheduled_at) }}</span>
+        <span class="ds-badge ds-badge--{{ a.kind }} ds-badge--xs" style="justify-self:start">{{ a.code }}</span>
+        <span class="muted" style="font-variant-numeric:tabular-nums">{{ a.ms }}</span>
+        {% if a.can_retry %}<form method="post" action="/dashboard/webhooks/{{ current.id }}/action"><input type="hidden" name="delivery_id" value="{{ a.d.id }}"><button class="ds-button ds-button--secondary ds-button--xs" name="action" value="retry">Retry</button></form>{% else %}<span></span>{% endif %}
+      </div>
+      {% else %}<div class="faint" style="padding:24px 16px;font-size:13px">No deliveries yet. Send a test event.</div>{% endfor %}
+    </div>
+    <div class="ds-card ds-card--m abx-card" style="gap:8px"><div style="font-weight:500">Signature verification</div>
+<pre class="abx-pre">AgentBox-Signature: t=1756800720,v1=5f1c…9a
+AgentBox-Event-Id: evt_01J8ZQ…
+
+expected = HMAC_SHA256(secret, t + "." + raw_body)
+reject if |now - t| &gt; 300s   # agentbox_sdk.verify_webhook_signature / verifyWebhookSignature</pre></div>
+    {% else %}<div class="faint" style="padding:48px;text-align:center">Add an endpoint to receive signed events.</div>{% endif %}
+  </div>
+</div>
+{% if create %}
+{% call m.modal('Add endpoint', '/dashboard/webhooks') %}
+  <form method="post" action="/dashboard/webhooks" style="display:flex;flex-direction:column;gap:12px">
+    <label class="abx-field"><span>URL</span><input class="abx-input mono" name="url" placeholder="https://your-app/agentbox/events" required autofocus></label>
+    <label class="abx-field"><span>Event types (comma separated, * for all)</span><input class="abx-input mono" name="event_types" value="message.received, message.delivered, message.bounced, policy.blocked"></label>
+    <label class="abx-field"><span>Description</span><input class="abx-input" name="description" placeholder="n8n workflow"></label>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><a class="ds-button ds-button--ghost ds-button--s" href="/dashboard/webhooks">Cancel</a><button class="ds-button ds-button--primary ds-button--s">Add endpoint</button></div>
+  </form>
+{% endcall %}
+{% endif %}
+{% endblock %}

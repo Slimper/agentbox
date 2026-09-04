@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push: { branches: [main] }
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_USER: agentbox, POSTGRES_PASSWORD: agentbox, POSTGRES_DB: agentbox }
+        ports: ["5434:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agentbox" --health-interval 5s --health-timeout 3s --health-retries 20
+      mailpit:
+        image: axllent/mailpit:latest
+        ports: ["1025:1025", "8025:8025"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      # service containers cannot take a command, and MinIO's official image needs `server`; the app creates buckets itself
+      - run: |
+          docker run -d --name minio -p 9010:9000 -e MINIO_ROOT_USER=agentbox -e MINIO_ROOT_PASSWORD=agentbox123 \
+            minio/minio:latest server /data
+          for i in $(seq 1 30); do curl -sf http://localhost:9010/minio/health/live && break; sleep 1; done
+      - run: uv sync --extra dev
+      - run: uv run ruff check .
+      - run: psql postgresql://agentbox:agentbox@localhost:5434/agentbox -c "CREATE DATABASE agentbox_test;"
+      - run: cd sdk/typescript && npm ci --silent || npm install --silent && npm run build
+      - run: uv run pytest -q
+        env:
+          AGENTBOX_TEST_DATABASE_URL: postgresql+asyncpg://agentbox:agentbox@localhost:5434/agentbox_test
+          AGENTBOX_S3_ENDPOINT: http://localhost:9010
+          AGENTBOX_OUTBOUND_SMTP_HOST: localhost
+          AGENTBOX_OUTBOUND_SMTP_PORT: "1025"

@@ -1,0 +1,77 @@
+[project]
+name = "agentbox"
+version = "0.1.0"
+description = "Email infrastructure for AI agents: inboxes, send/receive, threads, webhooks, policies"
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.4",
+  "sqlalchemy[asyncio]>=2.0.32",
+  "asyncpg>=0.29",
+  "alembic>=1.13",
+  "aioboto3>=13.0",
+  "aiosmtpd>=1.4.6",
+  "aiosmtplib>=3.0",
+  "httpx>=0.27",
+  "python-ulid>=2.7",
+  "cryptography>=43",
+  "typer>=0.12",
+  "structlog>=24",
+  "dnspython>=2.8.0",
+  "jinja2>=3.1.6",
+  "nh3>=0.3.7",
+  "python-multipart>=0.0.32",
+  "pyjwt[crypto]>=2.13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-asyncio>=0.26",
+  "ruff>=0.6",
+  "aiohttp>=3.10",
+  "agentbox-sdk[mcp]",
+]
+
+[project.scripts]
+agentbox = "agentbox.cli:app"
+
+[tool.uv.sources]
+agentbox-sdk = { path = "sdk/python", editable = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agentbox"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+markers = [
+  "integration: needs compose infra (postgres, minio)",
+  "e2e: full acceptance run, needs compose infra incl. mailpit",
+]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["alembic/versions"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agentbox", "agentbox_sdk", "tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"agentbox/dashboard/*" = ["E501"]
+"tests/*" = ["E501"]

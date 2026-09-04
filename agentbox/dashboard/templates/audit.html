@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block title %}Audit log{% endblock %}
+{% block content %}
+{% call m.page_head('Audit Log', 'Append-only. Every sensitive action and message lifecycle event.') %}<a class="ds-button ds-button--secondary ds-button--s" href="/dashboard/audit.csv?filter={{ filter }}">{{ m.icon('download', 14) }}Export CSV</a>{% endcall %}
+<div style="display:flex;gap:8px;align-items:center">
+  <div class="abx-tabs">{% for f in filters %}<a class="abx-tab {{ 'on' if filter == f }}" href="/dashboard/audit?filter={{ f }}">{{ f | capitalize }}</a>{% endfor %}</div>
+  <div style="flex:1"></div>
+  <form method="get" style="display:flex;gap:8px"><input type="hidden" name="filter" value="{{ filter }}"><input class="abx-input mono" name="type" value="{{ type }}" placeholder="exact type, e.g. policy.changed" style="height:32px;width:260px;font-size:12px"><button class="ds-button ds-button--secondary ds-button--s">Filter</button></form>
+</div>
+<div class="ds-card ds-card--none abx-list">
+  <div class="abx-grid-head" style="grid-template-columns:150px 180px 220px 1fr 60px"><span>Time</span><span>Actor</span><span>Action</span><span>Resource</span><span></span></div>
+  {% for e in events %}
+  <div class="abx-grid-row" style="grid-template-columns:150px 180px 220px 1fr 60px;padding:10px 16px">
+    <span class="muted" style="font-variant-numeric:tabular-nums">{{ e.time }}</span>
+    <span style="display:flex;align-items:center;gap:6px;min-width:0"><span class="ds-badge ds-badge--default ds-badge--xs">{{ 'api_key' if e.actor else 'system' }}</span><span class="mono trunc" style="font-size:12px">{{ e.actor or e.type.split('.')[0] ~ '-worker' }}</span></span>
+    <span class="mono" style="font-size:12px;color:{{ e.dot if e.dot != 'var(--color-fg-secondary)' else 'var(--color-fg-primary)' }}">{{ e.type }}</span>
+    <span class="mono muted trunc" style="font-size:12px" title="{{ e.text }}">{{ e.resource }} · {{ e.text }}</span>
+    <details style="position:relative"><summary class="faint" style="cursor:pointer;font-size:12px;list-style:none">json</summary><pre class="abx-pre" style="position:absolute;right:0;top:20px;width:520px;max-height:320px;z-index:10;box-shadow:var(--shadow-2)">{{ e.payload | tojson(indent=2) }}</pre></details>
+  </div>
+  {% else %}<div class="faint" style="padding:24px 16px;font-size:13px">No events.</div>{% endfor %}
+</div>
+{% endblock %}

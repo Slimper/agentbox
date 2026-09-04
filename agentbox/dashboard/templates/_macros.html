@@ -1,0 +1,32 @@
+{% macro icon(name, size=18) -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none">{{ icons[name] | safe }}</svg>
+{%- endmacro %}
+
+{% macro page_head(title, sub) -%}
+<div style="display:flex;align-items:flex-end;gap:16px">
+  <div><h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-0.01em">{{ title }}</h1>{% if sub %}<div style="color:var(--color-fg-secondary);margin-top:2px">{{ sub }}</div>{% endif %}</div>
+  <div style="flex:1"></div>
+  {{ caller() if caller }}
+</div>
+{%- endmacro %}
+
+{% macro event_rows(events, cols="16px 220px 1fr 140px", show_id=False) -%}
+{% for e in events %}
+<div class="abx-row" style="display:grid;grid-template-columns:{{ cols }};gap:12px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--color-border-light);font-size:13px">
+  {% if show_id %}<span class="mono" style="font-size:11px;color:var(--color-fg-disabled)">{{ e.time }}</span>{% endif %}
+  <span style="width:8px;height:8px;border-radius:50%;background:{{ e.dot }}"></span>
+  <span class="mono" style="font-size:12px">{{ e.type }}</span>
+  <span class="trunc" style="color:var(--color-fg-secondary)">{{ e.text }}</span>
+  {% if show_id %}<span class="mono" style="font-size:11px;color:var(--color-fg-disabled);text-align:right">{{ e.id }}</span>{% else %}<span style="color:var(--color-fg-disabled);text-align:right;font-variant-numeric:tabular-nums">{{ e.time }}</span>{% endif %}
+</div>
+{% else %}
+<div style="padding:24px 16px;color:var(--color-fg-disabled);font-size:13px">No events yet.</div>
+{% endfor %}
+{%- endmacro %}
+
+{% macro modal(title, close_href) -%}
+<div class="abx-overlay"><div class="ds-card ds-card--l abx-modal">
+  <div style="display:flex;align-items:center"><div style="font-size:18px;font-weight:600">{{ title }}</div><div style="flex:1"></div><a href="{{ close_href }}" class="ds-button ds-button--ghost ds-button--xs ds-button--icon-only">{{ icon('x', 16) }}</a></div>
+  {{ caller() }}
+</div></div>
+{%- endmacro %}

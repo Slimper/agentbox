@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block title %}{{ status }}{% endblock %}
+{% block content %}
+<div class="ds-card ds-card--l abx-card" style="max-width:560px;gap:10px">
+  <div style="display:flex;align-items:center;gap:10px"><span style="display:flex;color:var(--color-status-error)">{{ m.icon('alert') }}</span><div style="font-size:18px;font-weight:600">{{ status }} · {{ error.code }}</div></div>
+  <div>{{ error.message }}</div>
+  {% if error.details %}<pre class="abx-pre">{{ error.details | tojson(indent=2) }}</pre>{% endif %}
+  <div><a href="javascript:history.back()" class="ds-button ds-button--secondary ds-button--s">Back</a></div>
+</div>
+{% endblock %}

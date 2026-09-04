@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block title %}Approvals{% endblock %}
+{% block content %}
+{% call m.page_head('Pending approvals', 'Outbound messages held by an approval gate until a human decides.') %}<a class="ds-button ds-button--ghost ds-button--s" href="/dashboard/policies">Approval settings</a>{% endcall %}
+<div class="ds-card ds-card--none abx-list">
+  <div class="abx-grid-head" style="grid-template-columns:130px 1fr 1fr 1.4fr 200px"><span>Created</span><span>From</span><span>To</span><span>Subject</span><span></span></div>
+  {% for msg in messages %}
+  <div class="abx-grid-row" style="grid-template-columns:130px 1fr 1fr 1.4fr 200px">
+    <span class="muted">{{ hhmm(msg.created_at) }}</span><span class="mono trunc" style="font-size:12px">{{ msg.from_address.email }}</span><span class="mono trunc" style="font-size:12px">{{ msg.to_addresses | map(attribute='email') | join(', ') }}</span>
+    <a href="/dashboard/messages/{{ msg.id }}" class="trunc" style="color:inherit">{{ msg.subject or '(no subject)' }}</a>
+    <form method="post" action="/dashboard/messages/{{ msg.id }}/approval" style="display:flex;gap:6px"><button class="ds-button ds-button--primary ds-button--xs" name="action" value="approve">Approve</button><button class="ds-button ds-button--secondary ds-button--xs" name="action" value="reject" style="color:var(--color-status-error)">Reject</button></form>
+  </div>
+  {% else %}<div class="faint" style="padding:32px 16px;text-align:center;font-size:13px">Nothing waiting. Enable gates under Policies → Approval gates.</div>{% endfor %}
+</div>
+{% endblock %}

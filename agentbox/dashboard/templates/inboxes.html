@@ -1,0 +1,46 @@
+{% extends "base.html" %}{% block title %}Inboxes{% endblock %}
+{% block content %}
+{% call m.page_head('Inboxes', counts.get('active', 0) ~ ' active · ' ~ counts.get('suspended', 0) ~ ' suspended · ' ~ counts.get('expired', 0) ~ ' expired') %}
+  <a class="ds-button ds-button--primary ds-button--s" href="/dashboard/inboxes?create=managed">{{ m.icon('plus', 16) }}Create inbox</a>
+{% endcall %}
+<div style="display:flex;align-items:center;gap:8px">
+  <div class="abx-tabs">{% for f, label in [('all', 'All'), ('managed', 'Managed'), ('ephemeral', 'Ephemeral'), ('suspended', 'Suspended')] %}<a class="abx-tab {{ 'on' if filter == f }}" href="/dashboard/inboxes?filter={{ f }}{{ '&q=' ~ q if q }}">{{ label }}</a>{% endfor %}</div>
+  <div style="flex:1"></div>
+  <form method="get" style="display:flex;align-items:center;gap:8px;height:32px;padding:0 10px;border:1px solid var(--color-border-default);border-radius:4px;color:var(--color-fg-secondary);width:260px;font-size:13px"><input type="hidden" name="filter" value="{{ filter }}">{{ m.icon('search', 16) }}<input name="q" value="{{ q }}" placeholder="Filter by address or metadata" style="flex:1;border:0;background:none;color:inherit;font:inherit;outline:none;min-width:0"></form>
+</div>
+<div class="ds-card ds-card--none abx-list" style="border-radius:6px;border:1px solid var(--color-border-light)">
+  <table style="width:100%;border-collapse:collapse">
+    <thead><tr style="background:var(--color-surface-2);font-size:12px;color:var(--color-fg-secondary);text-align:left">
+      <th style="padding:10px 16px;font-weight:500">Address</th><th style="padding:10px 16px;font-weight:500">Status</th><th style="padding:10px 16px;font-weight:500">Mode</th><th style="padding:10px 16px;font-weight:500;text-align:right">Sent 24h</th><th style="padding:10px 16px;font-weight:500;text-align:right">Received 24h</th><th style="padding:10px 16px;font-weight:500">Last activity</th><th style="padding:10px 16px;font-weight:500">Metadata</th></tr></thead>
+    <tbody>
+    {% for r in inboxes %}
+      <tr class="abx-row" style="border-top:1px solid var(--color-border-light)">
+        <td style="padding:12px 16px" class="mono"><a href="/dashboard/inboxes/{{ r.i.id }}" style="color:inherit;font-size:13px">{{ r.i.address }}</a>{% if r.i.display_name %}<div class="muted" style="font-size:11px;font-family:Inter,sans-serif">{{ r.i.display_name }}</div>{% endif %}</td>
+        <td style="padding:12px 16px"><span class="{{ badge(r.i.status) }}">{{ r.i.status }}</span></td>
+        <td style="padding:12px 16px" class="muted">{{ r.mode }}</td>
+        <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums">{{ r.sent }}</td>
+        <td style="padding:12px 16px;text-align:right;font-variant-numeric:tabular-nums">{{ r.received }}</td>
+        <td style="padding:12px 16px" class="muted">{{ r.last }}</td>
+        <td style="padding:12px 16px" class="mono muted trunc" style="font-size:11px;max-width:220px">{{ r.meta }}</td>
+      </tr>
+    {% else %}<tr><td colspan="7" class="faint" style="padding:32px 16px;text-align:center">No inboxes match. <a href="/dashboard/inboxes?create=managed">Create the first one</a>.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if create %}
+{% call m.modal('Create inbox', '/dashboard/inboxes') %}
+  <form method="post" action="/dashboard/inboxes" style="display:flex;flex-direction:column;gap:16px">
+    <div class="abx-tabs boxed" style="background:var(--color-surface-0)"><a class="abx-tab {{ 'on' if create == 'managed' }}" href="/dashboard/inboxes?create=managed" style="flex:1;justify-content:center">Managed</a><a class="abx-tab {{ 'on' if create == 'ephemeral' }}" href="/dashboard/inboxes?create=ephemeral" style="flex:1;justify-content:center">Ephemeral</a>{% include "ee/inbox_create_tabs.html" ignore missing %}</div>
+    <label class="abx-field"><span>Address</span>
+      <div style="display:flex;align-items:center;border:1px solid var(--color-border-default);border-radius:4px;background:var(--color-surface-0);height:36px;overflow:hidden"><input name="username" placeholder="{{ 'rfq-agent' if create == 'managed' else 'leave empty for a random address' }}" class="mono" style="flex:1;border:0;background:none;padding:0 10px;color:inherit;font:inherit;height:100%;outline:none;min-width:0"><select name="domain" class="mono" style="border:0;border-left:1px solid var(--color-border-light);background:var(--color-surface-0);color:var(--color-fg-secondary);font:inherit;font-size:13px;height:100%;padding:0 10px;outline:none">{% for d in domains %}<option value="{{ d.domain }}">@{{ d.domain }}</option>{% endfor %}</select></div>
+      <span>Leave the name empty for a generated address like <span class="mono">rfq-7f23@{{ managed_domain }}</span></span></label>
+    {% if create == 'ephemeral' %}<label class="abx-field"><span>Time to live</span><input class="abx-input mono" name="ttl" value="24h" placeholder="30m, 24h, 7d (max 30d)"><span>The inbox expires automatically and emits <span class="mono">inbox.expired</span>.</span></label>{% endif %}
+    <label class="abx-field"><span>Display name (optional)</span><input class="abx-input" name="display_name" placeholder="Procurement Agent"></label>
+    <label class="abx-field"><span>Metadata (optional JSON)</span><textarea class="abx-textarea" name="metadata" placeholder='{ "agent_id": "agent_3498", "department": "procurement" }'></textarea></label>
+    <div class="muted" style="display:flex;align-items:center;gap:8px;font-size:12px">{{ m.icon('shield', 14) }} Inherits organization policies · {{ policy.limits.emails_per_minute }} / min{% if policy.recipient_policy.allowed_domains %} · allowed domains only{% endif %}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><a class="ds-button ds-button--ghost ds-button--s" href="/dashboard/inboxes">Cancel</a><button class="ds-button ds-button--primary ds-button--s">Create inbox</button></div>
+  </form>
+{% endcall %}
+{% endif %}
+{% endblock %}

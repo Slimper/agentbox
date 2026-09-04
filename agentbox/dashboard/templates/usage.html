@@ -1,0 +1,32 @@
+{% extends "base.html" %}{% block title %}Usage{% endblock %}
+{% block content %}
+{% call m.page_head('Usage & Billing', 'Billing period ' ~ period ~ ' · usage snapshots are immutable daily records') %}{% endcall %}
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;align-items:start">
+  <div class="ds-card ds-card--l abx-card" style="gap:12px">
+    <div style="display:flex;align-items:center;gap:8px"><span class="muted" style="font-size:12px;letter-spacing:.04em">Current plan</span><div style="flex:1"></div><span class="ds-badge ds-badge--accent ds-badge--s">{{ org_plan }}</span></div>
+    <div style="font-size:32px;font-weight:600;letter-spacing:-0.02em">Self-hosted<span class="muted" style="font-size:14px;font-weight:400"> · no metered billing</span></div>
+    <div class="muted" style="font-size:13px">Unlimited inboxes · unlimited emails · custom domains · policies · MCP</div>
+    <div style="border-top:1px solid var(--color-border-light);padding-top:12px;display:flex;flex-direction:column;gap:6px;font-size:13px">
+      <div style="display:flex"><span class="muted" style="flex:1">Sent this period</span><span style="font-variant-numeric:tabular-nums">{{ meters[1].used }}</span></div>
+      <div style="display:flex"><span class="muted" style="flex:1">Received this period</span><span style="font-variant-numeric:tabular-nums">{{ meters[2].used }}</span></div>
+    </div>
+  </div>
+  <div class="ds-card ds-card--l abx-card" style="gap:16px">
+    <div style="font-weight:500">Meters · live</div>
+    {% for mt in meters %}
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:baseline;gap:8px;font-size:13px"><span style="flex:1">{{ mt.label }}</span><span style="font-variant-numeric:tabular-nums;font-weight:500">{{ mt.used }}</span><span class="muted">/ {{ mt.max }}</span></div>
+      <div class="abx-bar" style="height:6px"><div style="width:{{ mt.pct }}%;background:{{ mt.color }}"></div></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<div class="ds-card ds-card--none abx-list">
+  <div class="abx-grid-head" style="grid-template-columns:120px 1fr 1fr 1fr 1fr 1fr 1fr 1fr"><span>Day</span><span>Active inboxes</span><span>Ephemeral</span><span>Sent</span><span>Received</span><span>Attachments</span><span>Webhook attempts</span><span>Domains</span></div>
+  {% for r in rows %}
+  <div class="abx-grid-row" style="grid-template-columns:120px 1fr 1fr 1fr 1fr 1fr 1fr 1fr;font-variant-numeric:tabular-nums">
+    <span class="mono" style="font-size:12px">{{ r.day }}</span><span>{{ r.active_inboxes }}</span><span>{{ r.ephemeral_inboxes_created }}</span><span>{{ r.messages_sent }}</span><span>{{ r.messages_received }}</span><span>{{ (r.attachment_bytes_stored / 1048576) | round(1) }} MB</span><span>{{ r.webhook_attempts }}</span><span>{{ r.custom_domains }}</span>
+  </div>
+  {% else %}<div class="faint" style="padding:24px 16px;font-size:13px">No rollups yet; the worker computes them hourly.</div>{% endfor %}
+</div>
+{% endblock %}

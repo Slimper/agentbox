@@ -1,0 +1,72 @@
+{% extends "base.html" %}{% block title %}Policies{% endblock %}
+{% block content %}
+{% set eff = effective %}
+<form method="post" action="/dashboard/policies" id="policy-form" style="display:contents">
+<input type="hidden" name="scope" value="{{ scope }}"><input type="hidden" name="mode" value="form">
+{% call m.page_head('Policies', 'What autonomous agents are allowed to send. More specific scope overrides broader.') %}
+  <a class="ds-button ds-button--secondary ds-button--s" href="#json">View as JSON</a>
+  <button class="ds-button ds-button--primary ds-button--s">Save changes</button>
+{% endcall %}
+<div style="display:flex;align-items:center;gap:12px">
+  <span class="muted" style="font-size:13px">Scope</span>
+  <div class="abx-tabs boxed"><a class="abx-tab {{ 'on' if scope == 'org' }}" href="/dashboard/policies?scope=org">Organization</a>{% if inbox %}<a class="abx-tab on" href="/dashboard/policies?scope={{ inbox.id }}">Inbox · {{ inbox.address }}</a>{% endif %}</div>
+  <select class="abx-select" style="width:280px;height:32px" onchange="location.href='/dashboard/policies?scope='+this.value"><option value="org">Pick an inbox for an override…</option>{% for i in inboxes_list %}<option value="{{ i.id }}" {{ 'selected' if inbox and i.id == inbox.id }}>{{ i.address }}</option>{% endfor %}</select>
+  {% if scope != 'org' %}<span class="muted" style="font-size:12px">Saving here stores an inbox override; organization values are shown as the effective baseline.</span>{% endif %}
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="ds-card ds-card--m abx-card" style="gap:14px">
+      <div style="font-weight:500">Capabilities</div>
+      {% for name, label, sub, on in [('send_enabled', 'Send enabled', 'Agents on this scope may initiate outbound mail', eff.send_enabled), ('receive_enabled', 'Receive enabled', 'Inbound mail is accepted and emits message.received', eff.receive_enabled), ('loop_protection', 'Loop protection', 'Block reciprocal agent-to-agent automation loops (per-thread hourly cap)', eff.limits.per_thread_per_hour > 0), ('allow_executables', 'Allow executable attachments', 'Permit .exe, .js, .bat and similar file types', eff.attachments.allow_executables)] %}
+      <div style="display:flex;align-items:center;gap:12px"><div style="flex:1"><div>{{ label }}</div><div class="muted" style="font-size:12px">{{ sub }}</div></div>
+        <label class="ds-toggle ds-toggle--s"><input class="ds-toggle__input" type="checkbox" name="{{ name }}" {{ 'checked' if on }}><span class="ds-toggle__track"><span class="ds-toggle__thumb"></span></span></label></div>
+      {% endfor %}
+    </div>
+    <div class="ds-card ds-card--m abx-card" style="gap:12px">
+      <div style="font-weight:500">Recipient policy</div>
+      <label class="abx-field"><span>Allowed domains (empty = any; comma separated, subdomains match)</span><textarea class="abx-textarea" name="allowed_domains" style="min-height:56px">{{ eff.recipient_policy.allowed_domains | join(', ') }}</textarea></label>
+      <label class="abx-field"><span>Blocked domains</span><textarea class="abx-textarea" name="blocked_domains" style="min-height:56px">{{ eff.recipient_policy.blocked_domains | join(', ') }}</textarea></label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">{% for d in eff.recipient_policy.allowed_domains %}<span class="ds-badge ds-badge--success ds-badge--s">{{ d }}</span>{% endfor %}{% for d in eff.recipient_policy.blocked_domains %}<span class="ds-badge ds-badge--error ds-badge--s">{{ d }}</span>{% endfor %}</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    <div class="ds-card ds-card--m abx-card" style="gap:12px">
+      <div style="font-weight:500">Send limits</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+        {% for name, label, val in [('emails_per_minute', 'emails / minute', eff.limits.emails_per_minute), ('emails_per_hour', 'emails / hour', eff.limits.emails_per_hour), ('emails_per_day', 'emails / day', eff.limits.emails_per_day), ('per_thread_per_hour', 'per thread / hour', eff.limits.per_thread_per_hour)] %}
+        <label class="abx-field"><span>{{ label }}</span><input class="abx-input" name="{{ name }}" value="{{ val }}" inputmode="numeric" style="height:32px;font-variant-numeric:tabular-nums"></label>
+        {% endfor %}
+      </div>
+      <div class="muted" style="font-size:12px">Exceeding a limit returns <span class="mono">rate_limited</span> and emits <span class="mono">policy.blocked</span>.</div>
+    </div>
+    <div class="ds-card ds-card--m abx-card" style="gap:14px">
+      <div style="font-weight:500">Approval gates</div>
+      {% for name, label, sub, on in [('approval_new_recipient', 'New recipient', 'A human approves the first message to any new address', eff.approval.new_recipient), ('approval_external_domain', 'External domain', 'Approval when the recipient domain is not one of your domains', eff.approval.external_domain)] %}
+      <div style="display:flex;align-items:center;gap:12px"><div style="flex:1"><div>{{ label }}</div><div class="muted" style="font-size:12px">{{ sub }}</div></div>
+        <label class="ds-toggle ds-toggle--s"><input class="ds-toggle__input" type="checkbox" name="{{ name }}" {{ 'checked' if on }}><span class="ds-toggle__track"><span class="ds-toggle__thumb"></span></span></label></div>
+      {% endfor %}
+      <div class="muted" style="font-size:12px">Held messages appear under <a href="/dashboard/approvals">Approvals</a>.</div>
+    </div>
+    <div class="ds-card ds-card--m abx-card" style="gap:8px">
+      <div style="font-weight:500">Attachments</div>
+      <div style="display:flex;gap:12px;align-items:center;font-size:13px"><label class="abx-field" style="width:140px"><span>max size, MB</span><input class="abx-input" name="max_size_mb" value="{{ eff.attachments.max_size_mb }}" inputmode="numeric" style="height:32px"></label><span class="muted">executables <b style="color:var(--color-fg-primary);font-weight:500">{{ 'allowed' if eff.attachments.allow_executables else 'blocked' }}</b> · malware scan <b style="color:var(--color-fg-primary);font-weight:500">n/a</b></span></div>
+    </div>
+  </div>
+</div>
+</form>
+<div id="json" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start">
+  <form method="post" action="/dashboard/policies" class="ds-card ds-card--m abx-card" style="gap:10px"><input type="hidden" name="scope" value="{{ scope }}"><input type="hidden" name="mode" value="json">
+    <div style="font-weight:500">Stored overrides for this scope (JSON)</div><textarea class="abx-textarea" name="config" style="min-height:200px">{{ config_json }}</textarea>
+    <div style="display:flex;gap:8px;align-items:center"><span class="muted" style="font-size:12px">Partial JSON; unspecified keys inherit.</span><div style="flex:1"></div><button class="ds-button ds-button--secondary ds-button--s">Save JSON</button></div></form>
+  <div class="ds-card ds-card--m abx-card" style="gap:8px"><div style="font-weight:500">Effective policy</div><pre class="abx-pre">{{ effective_json }}</pre><details><summary class="muted" style="cursor:pointer;font-size:12px">Defaults</summary><pre class="abx-pre" style="margin-top:8px">{{ defaults_json }}</pre></details></div>
+</div>
+<div class="ds-card ds-card--none abx-list">
+  <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--color-border-light)"><span style="font-weight:500">Suppressions</span><span class="muted" style="font-size:12px">addresses that never receive mail (hard bounces, complaints, manual)</span><div style="flex:1"></div>
+    <form method="post" action="/dashboard/suppressions" style="display:flex;gap:8px"><input class="abx-input" name="email" placeholder="email to suppress" required style="height:32px;width:240px"><input class="abx-input" name="note" placeholder="note" style="height:32px;width:160px"><button class="ds-button ds-button--secondary ds-button--s">Suppress</button></form></div>
+  <div class="abx-grid-head" style="grid-template-columns:1.6fr 120px 100px 1fr 120px 90px"><span>Email</span><span>Reason</span><span>Source</span><span>Note</span><span>Created</span><span></span></div>
+  {% for s in suppressions %}
+  <div class="abx-grid-row" style="grid-template-columns:1.6fr 120px 100px 1fr 120px 90px"><span class="mono" style="font-size:12px">{{ s.email }}</span><span class="ds-badge ds-badge--{{ 'error' if s.reason in ['hard_bounce', 'complaint', 'abuse'] else 'default' }} ds-badge--xs" style="justify-self:start">{{ s.reason }}</span><span class="muted">{{ s.source }}</span><span class="muted trunc">{{ s.note or '' }}</span><span class="muted">{{ s.created_at.strftime('%-d %b %Y') }}</span>
+    <form method="post" action="/dashboard/suppressions/{{ s.id }}/delete"><button class="ds-button ds-button--ghost ds-button--xs">Remove</button></form></div>
+  {% else %}<div class="faint" style="padding:20px 16px;font-size:13px">No suppressed addresses.</div>{% endfor %}
+</div>
+{% endblock %}

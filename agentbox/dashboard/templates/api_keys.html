@@ -1,0 +1,27 @@
+{% extends "base.html" %}{% block title %}API keys{% endblock %}
+{% block content %}
+{% call m.page_head('API Keys', 'Keys are hashed at rest. Live and test environments are separate.') %}<a class="ds-button ds-button--primary ds-button--s" href="/dashboard/api-keys?create=1">{{ m.icon('plus', 16) }}Create key</a>{% endcall %}
+{% if new_key %}<div class="ds-alert ds-alert--warning" style="display:flex;gap:12px;padding:14px 16px;border-radius:6px;background:var(--color-status-warning-bg);color:var(--color-status-warning);align-items:center">{{ m.icon('alert', 18) }}<div style="flex:1;color:var(--color-fg-primary)"><div style="font-weight:500">Copy your key now — it will not be shown again</div><div class="mono" style="font-size:13px;margin-top:4px">{{ new_key }}</div></div><a class="ds-button ds-button--ghost ds-button--xs ds-button--icon-only" href="/dashboard/api-keys">{{ m.icon('x', 14) }}</a></div>{% endif %}
+<div class="ds-card ds-card--none abx-list">
+  <div class="abx-grid-head" style="grid-template-columns:1.2fr 1.2fr 1.8fr 110px 110px 80px"><span>Name</span><span>Key</span><span>Scopes</span><span>Created</span><span>Last used</span><span></span></div>
+  {% for k in keys %}
+  <div class="abx-grid-row" style="grid-template-columns:1.2fr 1.2fr 1.8fr 110px 110px 80px;opacity:{{ '.5' if k.revoked_at else '1' }}">
+    <span style="display:flex;flex-direction:column"><span style="font-weight:500">{{ k.name }}</span><span class="muted" style="font-size:12px">{{ k.environment }}{% if k.id == principal.api_key_id %} · this session{% endif %}{% if k.revoked_at %} · revoked{% endif %}</span></span>
+    <span class="mono" style="font-size:12px">{{ k.key_prefix }}••••••••</span>
+    <span style="display:flex;gap:4px;flex-wrap:wrap">{% for s in k.scopes %}<span class="ds-badge ds-badge--default ds-badge--xs mono">{{ s }}</span>{% endfor %}</span>
+    <span class="muted">{{ k.created_at.strftime('%-d %b %Y') }}</span><span class="muted">{{ ago(k.last_used_at) }}</span>
+    {% if not k.revoked_at and k.id != principal.api_key_id %}<form method="post" action="/dashboard/api-keys/{{ k.id }}/revoke"><button class="ds-button ds-button--ghost ds-button--xs" style="color:var(--color-status-error)" onclick="return confirm('Revoke key?')">Revoke</button></form>{% else %}<span></span>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% if create %}
+{% call m.modal('Create API key', '/dashboard/api-keys') %}
+  <form method="post" action="/dashboard/api-keys" style="display:flex;flex-direction:column;gap:12px">
+    <label class="abx-field"><span>Name</span><input class="abx-input" name="name" placeholder="Production" required autofocus></label>
+    <label class="abx-field"><span>Environment</span><select class="abx-select" name="environment"><option value="live">live</option><option value="test">test</option></select></label>
+    <div class="abx-field"><span>Scopes (none selected = admin)</span><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">{% for s in scopes %}<label style="display:flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" name="scopes" value="{{ s }}" style="margin:0"><span class="mono">{{ s }}</span></label>{% endfor %}</div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><a class="ds-button ds-button--ghost ds-button--s" href="/dashboard/api-keys">Cancel</a><button class="ds-button ds-button--primary ds-button--s">Create key</button></div>
+  </form>
+{% endcall %}
+{% endif %}
+{% endblock %}
